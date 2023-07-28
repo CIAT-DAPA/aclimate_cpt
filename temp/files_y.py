@@ -7,6 +7,50 @@ import datetime
 from datetime import date
 from monthdelta import monthdelta
 import json
+import numpy as np
+import gzip
+import shutil
+
+def read_Files(ruta, skip):
+    
+    dataframe = pd.read_csv(ruta, sep='/t', engine='python', header=None)  # * El separador debe ser '\t' para indicar una tabulación
+    
+    idx = np.where(dataframe.iloc[:,0].str.find("cpt:T") != -1)
+
+    idx = [x+1 for x in idx]
+
+    dataframe.iloc[idx[0]] = "\t"+dataframe.iloc[idx[0]]
+    dataframe_ajustado=dataframe.iloc[:,0].str.split('\t', expand=True)
+    dataframe_ajustado = dataframe_ajustado.drop(range(skip)).reset_index(drop=True)
+    
+    return dataframe_ajustado
+
+def get_cpt_dates(df):
+    """
+    Function to get dates from CPT input files
+
+    Parameters:
+     df (pandas.DataFrame): input CPT file loaded used read_Files function
+
+    Returns:
+    pandas.Serie with formatted dates
+    """
+    df = df.drop(range(2))
+    years = df.iloc[0,1:].str.replace("(T[0-9]{2}:[0-9]{2})", "")
+    if all(years.isnull()):
+        pos = np.where(df.iloc[:,0].str.contains("cpt:T"))[0] 
+        tms = df.iloc[pos, 0]
+        #tms <- gsub("/", "-", tms)
+        tms  = tms.str.extract("cpt:T=([0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{4}-[0-9]{2}/[0-9]{2}|[0-9]{4}-[0-9]{2}/[0-9]{4}-[0-9]{2})").reset_index(drop = True).squeeze()
+        #algunos archivos tienen dos anos e.g Nov_Dec-Jan va a tener 2013(Dic) y 2014(Jan)
+        cond = tms.str.contains(r"[0-9]{4}-[0-9]{2}/[0-9]{4}-[0-9]{2}")
+        if any(cond):
+            to_change =  tms.iloc[np.where(cond)[0]].str.extract(r"(/[0-9]{4}-[0-9]{2})").reset_index(drop = True).squeeze()
+            tms.iloc[np.where(cond)[0]] =    to_change.str.replace("/", "")+"-01" 
+        years = tms 
+    
+    
+    return years.iloc[np.where(~years.isnull())[0]]
 
 
 def files_y(y_d, names):
@@ -115,7 +159,7 @@ start_time = date.today()
 
 #define some global variables (some paths should be already defined in runMain so may not be necesary here)
 month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-root_dir = os.path.join("D:\\","documents_andres", "pr_1", "Colombia","inputs")
+root_dir = os.path.join("D:"+os.sep, "documents_andres", "pr_1", "Colombia","inputs")
 main_dir  = os.path.join(root_dir, "prediccionClimatica")
 path_dpto = os.path.join(main_dir, 'estacionesMensuales')#dir_response
 dir_save  = os.path.join(main_dir, "descarga") #paste0(dirPrediccionInputs, "descarga", sep = "", collapse = NULL)
@@ -132,7 +176,7 @@ os.makedirs(dir_save, exist_ok=True)
 
 
 dir_names = os.listdir(path_dpto)
-path_stations = glob.glob(f"{path_dpto}\\**\\stations.csv", recursive = True)
+
 path_json = glob.glob(f"{path_dpto}\\**\\cpt_areas.json", recursive = True)
 init_params = {k: load_json(pth) for k,pth in zip(dir_names, path_json)}
 
@@ -158,16 +202,71 @@ for value in path_down.values():
 
 path_areas = path_json
 #data_areas = #MV
-#data_areas_l
-#areas_final
+#data_areas_l = #MV
+#areas_final = #MV
+#n_areas_l = MV
+#O_empty_2 = download.cpt = MV
 
-all_path_down
+print(" \n Archivos de entrada Descargados \n")
 
+all_path_down = {k: glob.glob(f"{v}\\**.tsv.gz") for k,v in path_down.items()}
+for k,v in all_path_down.items():
+    for pth in v:
+        if len(v) > 0:
+            try:
+                with gzip.open(pth, 'rb') as f_in:
+                    with open(pth.replace(".gz", ""), 'wb') as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+            except:
+                print('Error when unzziping')
+
+all_path_unzziped = {k: glob.glob(f"{v}\\**.tsv") for k,v in path_down.items()}
+
+tsm_o = {k: { os.path.basename(pth): read_Files(pth, skip = 0) for pth in v}   for k,v in all_path_unzziped.items()}
+time_sel = {k: {nm: get_cpt_dates(df) for nm,df in v.items()} for k,v in tsm_o.items()}
+
+print("\n Archivos de entrada cargados")
+#df = tsm_o['58504322333cb94a800f809b']['Jun_Nov-Dec.tsv']
+
+
+#data_x =  JM
+
+path_stations = glob.glob(f"{path_dpto}\\**\\stations.csv", recursive = True)
 data_y = {k: pd.read_csv(fl) for k,fl in zip(dir_names, path_stations)}
-
 part_id = {k: files_y(df, k) for k,df in data_y.items()}
 
+print("\n Archivos de entrada y estaciones construidos para CPT \n")
 
-  
+confi_l = {k: [x for x in v["modes"].values()] for k,v in init_params.items()}
+p_data=   {k: v.shape[1]-2 for k,v in data_y.items() }  
 
 
+
+######################################################
+######################################################
+######################################################
+dates = read_Files("Y:/CPT_merged/2014/input/merged/Apr_Jul-Aug.tsv", skip = 2)
+data_cpt1 = dates
+
+# Eliminar DataFrames donde la primera columna contiene el texto "cpt"
+
+data_cpt1 = data_cpt1[~data_cpt1.iloc[:, 0].str.contains("cpt")]#[data_cpt1[~data_cpt1.iloc[:, 0].str.contains("cpt")] for data_cpt1 in data_cpt1]
+pos = np.where(data_cpt1.iloc[:, 0] == "")[0]
+# Generar la secuencia de identificadores para cada capa
+nfields = len(data_cpt1)
+
+pos = [i for i in range(1, nfields + 1)]
+
+#genear la secuencia de los ids con el año y el nombre del campo e.j [1982_TSM, ..., 2023_TSM, 1982_URGD, ...]. Dim == len(pos)
+#unlist(lapply(1:2, function(i){paste0(year, "_", nfieldsname[i])}))
+np.repeat(["apr", "jun", "Jul"], repeats = 3, axis = 1)
+
+to_save = {}
+for i in range(len(pos)): 
+    if i == (len(pos)-1): 
+        end = data_cpt1.shape[0]
+    else:
+        end =pos[(i+1)]
+    
+    to_save["id"+str(i)] = data_cpt1.iloc[pos[i]:end]
+# Guardar los identificadores 
