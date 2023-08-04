@@ -12,6 +12,19 @@ import numpy as np
 import gzip
 import shutil
 from functools import reduce
+import itertools
+
+def merge_list(lst1, lst2):
+            """Funciton to merge lists
+            Params:
+            lst1 (list) objetc
+            lst2 (list) object
+
+            Returns:
+            merged list
+            """
+            ls = lst1 + lst2
+            return(ls)
 
 def read_Files(ruta, skip):
     
@@ -29,49 +42,6 @@ def read_Files(ruta, skip):
     
     return dataframe_ajustado
 
-def correl(x, y):
-    """
-    Function to calculate the weigthed correlation for cc_load_x.txt files
-
-    Parameters:
-    x (str): full path to the correlation file cca_cc.txt
-    y (str): full path to the CCA load file cca_load_x.txt
-
-    Retruns:
-    dict object with pandas.Dataframes for each field found
-    
-    """
-    #x = path_cc['58504322333cb94a800f809b'][0] #"Y:\CPT_merged\2022\output\raw_output\May_Oct-Nov_0.5_cca_load_x.txt"
-    #y = path_load['58504322333cb94a800f809b'][0]
-    
-    loads = read_Files(y, skip = 0)
-    cor = read_Files(x, skip = 2)  # * El separador debe ser '\t' para indicar una tabulación
-    cor= cor.drop(0, axis =1).drop(0, axis = 0).reset_index(drop=True).squeeze() # * El separador debe ser '\t' para indicar una tabulación
-    
-    lg = any(loads.iloc[:,0].str.contains("cpt:nfields"))
-    
-    if lg:
-
-        nfields = int(loads.iloc[:,0].str.extract(r"cpt:nfields=([0-9]{1})").dropna().squeeze())
-        loadings = loads.drop(range(2)).reset_index(drop= True)
-        field_names = pd.Series(loadings.iloc[:, 0].str.extract("cpt:field=([A-Za-z]+)").dropna().squeeze().unique())
-        ps = [np.where( loadings.iloc[:, 0].str.contains("cpt:field="))[0][x] for x in range(len(np.where( loadings.iloc[:, 0].str.contains("cpt:field="))[0]))]
-        ps = [ps[x] for x in range(0, len(ps), int(len(ps)/nfields))]
-        ps = ps + [loadings.shape[0]] 
-        spliteed = {field_names.iloc[n]: loadings.iloc[ps[n]:ps[n+1]].reset_index(drop= True).drop(range(1)).reset_index(drop= True) for n in range(len(ps)-1)}
-        
-        
-        to_ret = {k: get_cca_tables(v, cor) for k,v in spliteed.items()}
-
-
-    else:
-        y.iloc[0, 0] = ""
-        loadings = loads.drop(range(2)).reset_index(drop= True)
-        
-        to_ret = get_cca_tables(loadings, cor)
-    
-    
-    return to_ret
 
 
 def sum_df(df1, df2):
@@ -98,7 +68,7 @@ def get_cca_tables(loadings, cor):
     cor (pandas.Series): Correlation values for each CCA Mode
 
     Returns:
-    pandas.DataFrame with weighted correlation
+    array with weighted correlation
 
     """
 
@@ -107,6 +77,9 @@ def get_cca_tables(loadings, cor):
     pos = np.where(loadings.iloc[:, 0] == "")[0]
     if len(pos) == 1:
         w_cor = loadings.dropna(axis = 1)
+        w_cor = w_cor.drop(0, axis = 0).drop(0, axis = 1).astype(float)
+        w_cor = w_cor.replace(-999, np.nan)
+        w_cor = abs(w_cor)
     else:
         tables = []
         for idx in range(len(pos)):
@@ -120,6 +93,7 @@ def get_cca_tables(loadings, cor):
             cor_val = float(cor.iloc[idx])
             tmp_df  = loadings.iloc[start_pos:end_pos].reset_index(drop=True)
             tmp_df  = tmp_df.drop(0, axis = 0).drop(0, axis = 1).astype(float)
+            tmp_df  = tmp_df.dropna(axis = 1)
             tmp_df  = tmp_df.replace(-999, np.nan)
             tables.append(abs(tmp_df)*cor_val)
 
@@ -129,7 +103,59 @@ def get_cca_tables(loadings, cor):
         cor_ca = cor.iloc[range(len(tables))]
         w_cor  = reduce(sum_df, tables)
         w_cor  = w_cor*(1/np.sum([float(x) for x in cor_ca]))
-    return(w_cor)
+        
+        
+    w_cor  = w_cor.reset_index(drop = True)        
+    #w_cor  = w_cor.to_numpy().flatten().tolist()
+
+    return w_cor
+
+
+def correl(x, y):
+    """
+    Function to calculate the weigthed correlation for cc_load_x.txt files
+
+    Parameters:
+    x (str): full path to the correlation file cca_cc.txt
+    y (str): full path to the CCA load file cca_load_x.txt
+
+    Retruns:
+    dict object with pandas.Dataframes for each field found
+    
+    """
+    #x = path_cc['58504314333cb94a800f8098'][0] #"Y:\CPT_merged\2022\output\raw_output\May_Oct-Nov_0.5_cca_load_x.txt"
+    #y = path_load['58504314333cb94a800f8098'][0]
+    
+    loads = read_Files(y, skip = 0)
+    cor = read_Files(x, skip = 2)  # * El separador debe ser '\t' para indicar una tabulación
+    cor= cor.drop(0, axis =1).drop(0, axis = 0).reset_index(drop=True).squeeze() # * El separador debe ser '\t' para indicar una tabulación
+    
+
+    lg = any(loads.iloc[:,0].str.contains("cpt:nfields"))
+    
+    if lg:
+
+        nfields = int(loads.iloc[:,0].str.extract(r"cpt:nfields=([0-9]{1})").dropna().squeeze())
+        loadings = loads.drop(range(2)).reset_index(drop= True)
+        field_names = pd.Series(loadings.iloc[:, 0].str.extract("cpt:field=([A-Za-z]+)").dropna().squeeze().unique())
+        ps = [np.where( loadings.iloc[:, 0].str.contains("cpt:field="))[0][x] for x in range(len(np.where( loadings.iloc[:, 0].str.contains("cpt:field="))[0]))]
+        ps = [ps[x] for x in range(0, len(ps), int(len(ps)/nfields))]
+        ps = ps + [loadings.shape[0]] 
+        spliteed = {field_names.iloc[n]: loadings.iloc[ps[n]:ps[n+1]].reset_index(drop= True).drop(range(1)).reset_index(drop= True) for n in range(len(ps)-1)}
+    
+
+        to_ret = {k: get_cca_tables(spliteed[k], cor) for k,v in spliteed.items()}
+        
+    else:
+        
+        loadings = loads.drop(range(2)).reset_index(drop= True)
+        
+        to_ret = get_cca_tables(loadings, cor)
+    
+    
+    return to_ret
+
+
 
 def get_cpt_dates(df):
     """
@@ -235,6 +261,97 @@ def data_raster(dates):
         to_save[df_key] = data_cpt1.iloc[start_pos:end_pos].reset_index(drop=True)
     return(to_save)
 
+def files_x(raster, cor, out_file):
+    """
+    Funtion to create files_X for area optimization process.
+
+    Parameters:
+    :param raster (pandas.DataFrame) with CPT predictors data loaded using readFiles function
+    cor (dict) with correlation matrix for each cell in raster
+    out_file (str) full_path to predictor data source
+
+    Returns:
+    None
+    .txt files with selected cell for area optimization
+    """
+
+    #raster = tsm_o['58504314333cb94a800f8098']['Jun_Jul-Aug.tsv']
+    #cor    = cor_tsm['58504314333cb94a800f8098'][0]
+    #out_file = path_x['58504314333cb94a800f8098'][0]
+
+    out_file_name = out_file.replace(".tsv", "") 
+    #na = names_selec[29]
+    #years = time_sel[[29]]
+    
+
+    nfields = int(raster.iloc[:,0].str.extract(r"cpt:nfields=([0-9]{1})").dropna().squeeze())
+    field_names = raster.iloc[:, 0].str.extract("cpt:field=([A-Za-z]+)").dropna().squeeze().unique().tolist()
+    tmp_df = raster.drop(range(2)).reset_index(drop= True)
+    tag_add = tmp_df.iloc[np.where(tmp_df.iloc[:,0].str.match(r"cpt:T$") )[0].tolist(), : ].fillna("")
+
+    if len(tag_add) == 1:
+        tmp_df = tmp_df.drop(range(1)).reset_index(drop= True)
+        tag_add_p = "\n"+"\t".join([str(x) for x in tag_add.iloc[0]])
+    elif len(tag_add) > 1:
+        raise ValueError("Multiple cpt:T matched when should be 1")
+    else:
+        tag_add_p = ""
+    cp = re.compile("cpt:T=|cpt:field=")
+    idx = np.where(pd.Series([len(cp.findall(x)) for x in tmp_df.iloc[:,0]]) != 0)[0].tolist()
+        
+        
+        
+    if nfields > 1:
+        
+        change_point =  [x for x in np.diff(idx)]
+        change_point = np.cumsum([change_point.count(x) for x in np.unique(change_point)])
+        change_point = change_point[ range(0, int(len(change_point)/nfields))].tolist() 
+        change_point = change_point + [len(idx) - change_point[len(change_point)-1]] 
+    
+        labs = reduce(merge_list,[np.repeat(field_names[x],change_point[x]).tolist() for x in range(len(change_point)) ])
+        if len(labs) != len(idx):
+            raise ValueError("Number of identified rows do not match field labels array length")
+    else:
+        cor = {field_names[0]: cor}
+        labs = np.repeat(field_names[0], len(idx)).tolist()
+    
+    cor_vec = reduce(merge_list, [cor[x].to_numpy().flatten().tolist() for x in cor.keys()])
+    idx = idx + [tmp_df.shape[0]]
+
+    for perc in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+        print(f"    Processing quantile {perc}")
+        thr = np.nanquantile(cor_vec, q = perc)
+        tmp_df_perc = tmp_df.copy()
+        for i in range(len(idx)-1):
+            k       = labs[i]
+            cor_tmp = cor[k]
+            cor_tmp = cor_tmp.mask(cor_tmp < thr, np.nan)
+            cor_tmp = cor_tmp.mask(~cor_tmp.isna(), 1)
+            #cor_tmp = np.where(cor_tmp.isna() )
+            #tmp_df = tmp_df.copy()
+            #hay un problema caundo los datos no son rregulares
+            
+            to_remove = np.where(tmp_df_perc.iloc[(idx[i]+2):idx[i+1], 1:].fillna(np.nan).isna().sum() != 0 )[0].tolist()
+            if len(to_remove) != 0:
+                to_keep = min(to_remove) + 1
+            else:
+                to_keep = tmp_df.shape[1]
+        
+            tmp_df_perc.iloc[(idx[i]+2):idx[i+1], 1:to_keep] = tmp_df_perc.iloc[(idx[i]+2):idx[i+1], 1:to_keep].dropna(axis = 1).reset_index(drop=True).astype(float).mul(cor_tmp.reset_index(drop = True), axis = 0).fillna(-999)
+            #for pos in range(len(cor_tmp[0])):
+            #    tmp_df.iloc[(idx[i]+2):idx[i+1], 1:].iloc[cor_tmp[0][pos], cor_tmp[1][pos]] = -999
+
+
+        tmp_df_perc = tmp_df_perc.fillna("")
+        with open(out_file_name+f"_{perc}.txt", "w") as fl:
+            fl.write("xmlns:cpt=http://iri.columbia.edu/CPT/v10/")
+            fl.write("\n")
+            fl.write(raster.iloc[1,0]+tag_add_p)
+            fl.write("\n")
+            for i in range(tmp_df_perc.shape[0]):
+                fl.write("\t".join([str(x) for x in tmp_df_perc.iloc[i]]))
+                fl.write("\n")
+    return("Ok")
 
 
 
@@ -287,7 +404,6 @@ def load_json(pth):
     with open(pth, 'r') as js:
         to_ret = json.load(js)
     return(to_ret)
-
 
 def run_cpt(path_x, path_y, run, output, confi, p, type_trans):
 
@@ -546,10 +662,6 @@ def run_cpt(path_x, path_y, run, output, confi, p, type_trans):
 
     return("ok")
         
-        
-    
-
-
 def get_season_months(season_type, month, month_abb):
     """Function to generate month season labs for folders names based on season type 
     Parameters:
@@ -669,7 +781,7 @@ for k,v in all_path_down.items():
 
 all_path_unzziped = {k: glob.glob(f"{v}\\**.tsv") for k,v in path_down.items()}
 
-tsm_o = {k: { os.path.basename(pth): read_Files(pth, skip = 0) for pth in v}   for k,v in all_path_unzziped.items()}
+tsm_o = {k: [read_Files(pth, skip = 0) for pth in v]   for k,v in all_path_unzziped.items()}
 time_sel = {k: {nm: get_cpt_dates(df) for nm,df in v.items()} for k,v in tsm_o.items()}
 
 print("\n Archivos de entrada cargados")
@@ -708,28 +820,21 @@ print("\n Primera corrida realizada")
 
 path_cc   = {k: [x+"cca_cc.txt" for x in v] for k,v in path_output_pred.items()}
 path_load = {k: [x+"cca_load_x.txt" for x in v] for k,v in path_output_pred.items()}
- 
+cor_tsm   = {k: [correl(path_cc[k][n], path_load[k][n]) for n in range(len(path_cc[k]))   ] for k in dir_names}
+names_selec =  {k: [os.path.basename(path_x[k][x]).replace(".tsv", "") for x in  range(len(path_x[k])) ] for k,v in path_x.items()}
 
-#lapply(path_cc,function(x)lapply(x,function(x1)read.table(x1,sep="\t",dec=".",header = T,row.names = 1,skip =2,fill=TRUE,na.strings =-999,stringsAsFactors=FALSE)))
+for k in dir_names:
+    print(f">>> Creating files_x for: {k}")
+    for j in range(len(path_x[k])):
+        files_x(raster = tsm_o[k][j]
+                ,cor = cor_tsm[k][j]
+                ,out_file = path_x[k][j])
+
 
 
 #####################################################
 ######################################################
 ######################################################
-dates = read_Files("Y:/CPT_merged/2014/input/merged/Apr_Jul-Aug.tsv", skip = 0)
 
-path_x = path_x[ '58504322333cb94a800f809b'][0]
-path_y = path_zone['58504322333cb94a800f809b']
-run = path_run['58504322333cb94a800f809b'][0]
-output = path_output_pred['58504322333cb94a800f809b'][0]
-confi = confi_l['58504322333cb94a800f809b'][0]
-p = p_data['58504322333cb94a800f809b']
-type_trans = transform['58504322333cb94a800f809b'][0]
 
-run_cpt( path_x = path_x[ '58504322333cb94a800f809b'][0],
-path_y = path_zone['58504322333cb94a800f809b'],
-run = path_run['58504322333cb94a800f809b'][0],
-output = path_output_pred['58504322333cb94a800f809b'][0],
-confi = confi_l['58504322333cb94a800f809b'][0],
-p = p_data['58504322333cb94a800f809b'],
-type_trans = transform['58504322333cb94a800f809b'][0])
+
