@@ -261,25 +261,37 @@ def data_raster(dates):
         to_save[df_key] = data_cpt1.iloc[start_pos:end_pos].reset_index(drop=True)
     return(to_save)
 
-def files_x(raster, cor, out_file):
+def run_optimization(raster, cor, out_file, path_y, dir_out_path, config, n_cols, data_trans):
     """
-    Funtion to create files_X for area optimization process.
+    Funtion to create files_X for area optimization process and run CPT batch.
 
     Parameters:
-    :param raster (pandas.DataFrame) with CPT predictors data loaded using readFiles function
+    raster (pandas.DataFrame) with CPT predictors data loaded using readFiles function
     cor (dict) with correlation matrix for each cell in raster
     out_file (str) full_path to predictor data source
+    path_y (str) full path to the predictand file (file_y , path_zone)
+    dir_out_path (str) full path to output folder (path_months_l)
+    config (dict) dictionary with configuration values for run CPT (confi_l)
+    n_cols (int) number of variables present in file y data (p_data)
+    data_trans (logical) whether gamma transform predictand data
+
 
     Returns:
-    None
     .txt files with selected cell for area optimization
+    All CPT outputs
     """
-
-    #raster = tsm_o['58504314333cb94a800f8098']['Jun_Jul-Aug.tsv']
-    #cor    = cor_tsm['58504314333cb94a800f8098'][0]
-    #out_file = path_x['58504314333cb94a800f8098'][0]
+    #how to run
+    # raster = tsm_o['58504314333cb94a800f8098'][0]
+    # cor    = cor_tsm['58504314333cb94a800f8098'][0]
+    # out_file = path_x['58504314333cb94a800f8098'][0]
+    # path_y = path_zone['58504314333cb94a800f8098']
+    # dir_out_path = path_months_l['58504314333cb94a800f8098'][0]
+    # config  = confi_l['58504314333cb94a800f8098'][0]
+    # n_cols = p_data['58504314333cb94a800f8098']
+    # data_trans = transform['58504314333cb94a800f8098'][0]
 
     out_file_name = out_file.replace(".tsv", "") 
+    print(f"  >> Season {os.path.basename(out_file_name)}")
     #na = names_selec[29]
     #years = time_sel[[29]]
     
@@ -343,7 +355,8 @@ def files_x(raster, cor, out_file):
 
 
         tmp_df_perc = tmp_df_perc.fillna("")
-        with open(out_file_name+f"_{perc}.txt", "w") as fl:
+        pth_to_save = out_file_name+f"_{perc}.txt"
+        with open(pth_to_save, "w") as fl:
             fl.write("xmlns:cpt=http://iri.columbia.edu/CPT/v10/")
             fl.write("\n")
             fl.write(raster.iloc[1,0]+tag_add_p)
@@ -351,6 +364,20 @@ def files_x(raster, cor, out_file):
             for i in range(tmp_df_perc.shape[0]):
                 fl.write("\t".join([str(x) for x in tmp_df_perc.iloc[i]]))
                 fl.write("\n")
+
+        if not os.path.exists(pth_to_save):
+            raise ValueError(f"File {pth_to_save} does not exists.")
+        else:
+            print(f"    >Runnig CPT_batch for {perc}")
+            run_cpt(path_x     = pth_to_save,
+                    path_y     = path_y,
+                    run        = os.path.join(dir_out_path, f"run_{perc}.bat"),
+                    output     = os.path.join(dir_out_path, "output" , f"{perc}_"),
+                    confi      = config,
+                    p          = n_cols,
+                    type_trans = data_trans )
+
+
     return("Ok")
 
 
@@ -826,10 +853,19 @@ names_selec =  {k: [os.path.basename(path_x[k][x]).replace(".tsv", "") for x in 
 for k in dir_names:
     print(f">>> Creating files_x for: {k}")
     for j in range(len(path_x[k])):
-        files_x(raster = tsm_o[k][j]
-                ,cor = cor_tsm[k][j]
-                ,out_file = path_x[k][j])
+        run_optimization(raster = tsm_o[k][j]
+                         ,cor = cor_tsm[k][j]
+                         ,out_file = path_x[k][j]
+                         ,path_y = path_zone[k]
+                         ,dir_out_path = path_months_l[k][j]
+                         ,config  = confi_l[k][j]
+                         ,n_cols = p_data[k]
+                         ,data_trans = transform[k][j] )
 
+  
+    
+    
+    
 
 
 #####################################################
