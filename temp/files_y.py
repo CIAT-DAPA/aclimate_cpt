@@ -42,8 +42,6 @@ def read_Files(ruta, skip):
     
     return dataframe_ajustado
 
-
-
 def sum_df(df1, df2):
             """
             Function extract tables from cca_loas_x.txt files and calculate the weigthed correlation
@@ -110,7 +108,6 @@ def get_cca_tables(loadings, cor):
 
     return w_cor
 
-
 def correl(x, y):
     """
     Function to calculate the weigthed correlation for cc_load_x.txt files
@@ -154,8 +151,6 @@ def correl(x, y):
     
     
     return to_ret
-
-
 
 def get_cpt_dates(df):
     """
@@ -212,8 +207,6 @@ def check_file_integrity(pth):
         status = "Ok"
 
     return(status)
-
-
 
 def data_raster(dates):
     """
@@ -281,14 +274,14 @@ def run_optimization(raster, cor, out_file, path_y, dir_out_path, config, n_cols
     All CPT outputs
     """
     #how to run
-    # raster = tsm_o['58504314333cb94a800f8098'][0]
-    # cor    = cor_tsm['58504314333cb94a800f8098'][0]
-    # out_file = path_x['58504314333cb94a800f8098'][0]
-    # path_y = path_zone['58504314333cb94a800f8098']
-    # dir_out_path = path_months_l['58504314333cb94a800f8098'][0]
-    # config  = confi_l['58504314333cb94a800f8098'][0]
-    # n_cols = p_data['58504314333cb94a800f8098']
-    # data_trans = transform['58504314333cb94a800f8098'][0]
+    # raster = tsm_o['58504322333cb94a800f809b'][1]
+    # cor    = cor_tsm['58504322333cb94a800f809b'][1]
+    # out_file = path_x['58504322333cb94a800f809b'][1]
+    # path_y = path_zone['58504322333cb94a800f809b']
+    # dir_out_path = path_months_l['58504322333cb94a800f809b'][1]
+    # config  = confi_l['58504322333cb94a800f809b'][1]
+    # n_cols = p_data['58504322333cb94a800f809b']
+    # data_trans = transform['58504322333cb94a800f809b'][1]
 
     out_file_name = out_file.replace(".tsv", "") 
     print(f"  >> Season {os.path.basename(out_file_name)}")
@@ -311,8 +304,6 @@ def run_optimization(raster, cor, out_file, path_y, dir_out_path, config, n_cols
     cp = re.compile("cpt:T=|cpt:field=")
     idx = np.where(pd.Series([len(cp.findall(x)) for x in tmp_df.iloc[:,0]]) != 0)[0].tolist()
         
-        
-        
     if nfields > 1:
         
         change_point =  [x for x in np.diff(idx)]
@@ -334,10 +325,16 @@ def run_optimization(raster, cor, out_file, path_y, dir_out_path, config, n_cols
         print(f"    Processing quantile {perc}")
         thr = np.nanquantile(cor_vec, q = perc)
         tmp_df_perc = tmp_df.copy()
+        empty_counter = []
         for i in range(len(idx)-1):
             k       = labs[i]
             cor_tmp = cor[k]
             cor_tmp = cor_tmp.mask(cor_tmp < thr, np.nan)
+            if cor_tmp.isna().values.all():
+                empty_counter.append(False)
+            else:
+                empty_counter.append(True)
+
             cor_tmp = cor_tmp.mask(~cor_tmp.isna(), 1)
             #cor_tmp = np.where(cor_tmp.isna() )
             #tmp_df = tmp_df.copy()
@@ -352,14 +349,22 @@ def run_optimization(raster, cor, out_file, path_y, dir_out_path, config, n_cols
             tmp_df_perc.iloc[(idx[i]+2):idx[i+1], 1:to_keep] = tmp_df_perc.iloc[(idx[i]+2):idx[i+1], 1:to_keep].dropna(axis = 1).reset_index(drop=True).astype(float).mul(cor_tmp.reset_index(drop = True), axis = 0).fillna(-999)
             #for pos in range(len(cor_tmp[0])):
             #    tmp_df.iloc[(idx[i]+2):idx[i+1], 1:].iloc[cor_tmp[0][pos], cor_tmp[1][pos]] = -999
-
+        if nfields > 1:
+            new_field_names = np.unique([labs[x]  for x in range(len(labs)-1) if empty_counter[x]]).tolist()
+            nfields_new = "cpt:nfields="+str(len(new_field_names))
+            if len(new_field_names) == 1:
+                to_remove = [idx[x] for x in range(len(idx)-1) if empty_counter[x]]
+                start_from = to_remove[0]
+                tmp_df_perc = tmp_df_perc.iloc[start_from:]
+        else:
+            nfields_new = "cpt:nfields="+str(nfields)
 
         tmp_df_perc = tmp_df_perc.fillna("")
         pth_to_save = out_file_name+f"_{perc}.txt"
         with open(pth_to_save, "w") as fl:
             fl.write("xmlns:cpt=http://iri.columbia.edu/CPT/v10/")
             fl.write("\n")
-            fl.write(raster.iloc[1,0]+tag_add_p)
+            fl.write(nfields_new+tag_add_p)
             fl.write("\n")
             for i in range(tmp_df_perc.shape[0]):
                 fl.write("\t".join([str(x) for x in tmp_df_perc.iloc[i]]))
@@ -379,8 +384,6 @@ def run_optimization(raster, cor, out_file, path_y, dir_out_path, config, n_cols
 
 
     return("Ok")
-
-
 
 def files_y(y_d, names, main_dir):
     """ Function to convert station precipitation file to CPT data format and write it to tsv define file
@@ -736,13 +739,38 @@ def get_season_years(season_type, month, year):
         raise ValueError("Invalid seaso type")
         
     return(to_ret)
-    
+
+def best_GI(rutas):
+    valores = []  # Lista para almacenar los valores
+
+    for ruta in rutas:
+        datos = []  # Lista para almacenar los datos
+
+        with open(ruta, 'r') as archivo:
+            for linea in archivo:
+                columnas = linea.strip().split()
+                datos.append(columnas)
+
+        # Convertimos los datos en un DataFrame usando pandas
+        df = pd.DataFrame(datos)
+        
+        # Obtenemos el valor de la última fila en la última columna
+        ultimo_valor = df.iloc[-1, -1]
+        
+        valores.append(ultimo_valor)
+    valores = [float(x) for x in valores]
+    best_gi = [rutas[x] for x in np.where(valores == np.max(valores))[0]]
+    if len(best_gi) > 1:
+        #best_gi = best_gi[0]
+        print("tow or more fiel where found, selecting first one")#raise Warning("more than one file where found, selection the first one")
+        
+    return best_gi[0]
 
 ######### Run #################
 start_time = date.today()
 #options(timeout=180)
 ##############################
-
+print(os.path.join("D:/", "andres"))
 #define some global variables (some paths should be already defined in runMain so may not be necesary here)
 month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 root_dir = os.path.join("D:"+os.sep, "documents_andres", "pr_1", "Colombia","inputs")
@@ -752,6 +780,11 @@ dir_save  = os.path.join(main_dir, "descarga") #paste0(dirPrediccionInputs, "des
 os.makedirs(os.path.join(main_dir, "run_CPT"), exist_ok=True)
 os.makedirs(dir_save, exist_ok=True)
 ext_exe = ".bat"
+dirOutputs  = os.path.join("D:"+os.sep, "documents_andres", "pr_1", "Colombia", "outputs")
+dirPrediccionOutputs  = os.path.join(dirOutputs, "prediccionClimatica")
+path_save = os.path.join(dirPrediccionOutputs, "probForecast")
+os.makedirs(path_save, exist_ok=True)
+
 #dirCurrent <- paste0(dirWorkdir, currentCountry, "/")
 #dirInputs <- paste0(dirCurrent, "inputs/", sep = "", collapse = NULL)
 #main_dir = "paste0(dirInputs, "prediccionClimatica/", sep = "", collapse = NULL)"
@@ -760,7 +793,9 @@ ext_exe = ".bat"
 #dir_response <- paste0(dirPrediccionInputs, "estacionesMensuales", sep = "", collapse = NULL)
 #dir_stations <- paste0(dirPrediccionInputs, "dailyData", sep = "", collapse = NULL)
 #dir_inputs_nextgen <- paste0(dirPrediccionInputs, "NextGen/", sep = "", collapse = NULL)
-
+#dirOutputs <- paste0(dirCurrent, "outputs/", sep = "", collapse = NULL)
+#dirPrediccionOutputs <- paste0(dirOutputs, "prediccionClimatica/", sep = "", collapse = NULL)
+#path_save <- paste0(dirPrediccionOutputs, "probForecast", sep = "", collapse = NULL)
 
 dir_names = os.listdir(path_dpto)
 
@@ -787,11 +822,6 @@ for value in path_down.values():
     os.makedirs(value, exist_ok=True)
 
 path_areas = path_json
-#data_areas = #MV
-#data_areas_l = #MV
-#areas_final = #MV
-#n_areas_l = MV
-#O_empty_2 = download.cpt = MV
 
 print(" \n Archivos de entrada Descargados \n")
 
@@ -809,12 +839,9 @@ for k,v in all_path_down.items():
 all_path_unzziped = {k: glob.glob(f"{v}\\**.tsv") for k,v in path_down.items()}
 
 tsm_o = {k: [read_Files(pth, skip = 0) for pth in v]   for k,v in all_path_unzziped.items()}
-time_sel = {k: {nm: get_cpt_dates(df) for nm,df in v.items()} for k,v in tsm_o.items()}
+#time_sel = {k: {nm: get_cpt_dates(df) for nm,df in v.items()} for k,v in tsm_o.items()}
 
 print("\n Archivos de entrada cargados")
-#df = tsm_o['58504322333cb94a800f809b']['Jun_Nov-Dec.tsv']
-
-#data_x =  JM
 
 path_stations = glob.glob(f"{path_dpto}\\**\\stations.csv", recursive = True)
 data_y = {k: pd.read_csv(fl) for k,fl in zip(dir_names, path_stations)}
@@ -827,10 +854,11 @@ transform  =  {k: [v[x]["transformation"][0]["gamma"] for x in range(len(v)) if 
 p_data     = {k: v.shape[1]-2 for k,v in data_y.items() }  
 
 path_x     = {x: glob.glob(f"{os.path.join(dir_save,x)}\\**.tsv", recursive = True) for x in os.listdir(dir_save)}   # lapply(list.files(dir_save,full.names = T),function(x)list.files(x,recursive = T,full.names = T))
-path_zone  = {dir_names[x]: glob.glob(f"{os.path.join(main_dir, 'run_CPT')}\\**\\**.txt", recursive = True)[x] for x in range(len(dir_names))} #list.files(paste0(main_dir,"run_CPT"),full.names = T) %>% paste0(.,"/y_",list.files(path_dpto),".txt")
+path_zone  = {dir_names[x]: glob.glob(f"{os.path.join(main_dir, 'run_CPT')}\\**\\y_**.txt", recursive = True)[x] for x in range(len(dir_names))} #list.files(paste0(main_dir,"run_CPT"),full.names = T) %>% paste0(.,"/y_",list.files(path_dpto),".txt")
 path_output_pred = {k: [ os.path.join(pth, "output","0_") for pth in v] for k,v in path_months_l.items()}
 path_run         = {k: [ os.path.join(pth, "run_0"+ext_exe) for pth in v] for k,v in path_months_l.items()}#lapply(path_months_l,function(x)paste0(x,"/output/0_"))
 
+print("\n Iniciando Primera corrida de CPT")
 for k in dir_names:
     for j in  range(len(path_x[k])):
         print(f">>> Processing: {os.path.basename( path_x[k][j])}")
@@ -850,6 +878,7 @@ path_load = {k: [x+"cca_load_x.txt" for x in v] for k,v in path_output_pred.item
 cor_tsm   = {k: [correl(path_cc[k][n], path_load[k][n]) for n in range(len(path_cc[k]))   ] for k in dir_names}
 names_selec =  {k: [os.path.basename(path_x[k][x]).replace(".tsv", "") for x in  range(len(path_x[k])) ] for k,v in path_x.items()}
 
+print("\n Iniciando proceso de Optimización de área predictora")
 for k in dir_names:
     print(f">>> Creating files_x for: {k}")
     for j in range(len(path_x[k])):
@@ -862,15 +891,75 @@ for k in dir_names:
                          ,n_cols = p_data[k]
                          ,data_trans = transform[k][j] )
 
-  
-    
-    
-    
+best_decil_l ={k: [best_GI(glob.glob(v[j]+ "\\output"+"\\**_GI.txt")) for j in range(len(v))]  for k,v in path_months_l.items()}
 
 
 #####################################################
 ######################################################
 ######################################################
+
+def proba(root_path:str):
+    below = pd.read_csv(root_path.replace("GI.txt", "prob.txt")
+                            #,skiprows=3 
+                            ,header=None
+                            ,sep='\t'
+                            , float_precision="high"
+                            )
+    normal=
+    above = 
+
+    data = cbind
+    return data
+
+
+root_path = best_decil_l["58504322333cb94a800f809b"][0]
+def metricas(
+        root_path:str
+        ,month:str
+        ,season_type:str
+        ,predictand:str
+        ):
+    pearsonDf = pd.read_csv(root_path.replace("GI.txt", "pearson.txt")
+                            ,skiprows=3 
+                            ,header=None
+                            ,sep='\t'
+                            , float_precision="high"
+                            )
+    afcDf = pd.read_csv(root_path.replace("GI.txt", "2afc.txt")
+                            ,skiprows=3 
+                            ,header=None
+                            ,sep='\t'
+                            , float_precision="high"
+                            )
+    ccaDf = pd.read_csv(root_path.replace("GI.txt", "cca_cc.txt")
+                            ,skiprows=3 
+                            ,header=None
+                            ,sep='\t'
+                            , float_precision="high"
+                            )
+    giDf = pd.read_fwf(root_path
+                            ,skiprows=7 
+                            ,header=None
+                            ,sep='\t'
+                            , infer_nrows=True
+                            )
+    pearsonDf.columns = ['Station','value']
+    afcDf.columns = ['Station','value']
+    ccaDf.columns = ['id','correlation']
+    giDf.columns = ['current_x','current_y','current_cca','current_index'
+                    ,'optimum_x','optimum_y','optimum_cca','optimum_index']
+    pearsonacfDf  = pearsonDf.merge(afcDf, on='Station',suffixes=['_pearson','_afc'])
+    canonica= ccaDf[ccaDf.id  == 1].correlation.iloc[0]
+    goodness = giDf.iloc[giDf.shape[0]-1].optimum_index
+    pearsonacfDf['month'] = month
+    pearsonacfDf['goodness']  = goodness
+    pearsonacfDf['canonica'] = canonica
+    pearsonacfDf['type'] =  season_type
+    pearsonacfDf['predictand'] = predictand
+
+    return pearsonacfDf
+
+
 
 
 
