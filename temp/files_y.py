@@ -6,13 +6,28 @@ import re
 import glob
 import datetime
 from datetime import date
-from monthdelta import monthdelta
 import json
 import numpy as np
 import gzip
 import shutil
 from functools import reduce
 import itertools
+from monthdelta import monthdelta
+
+def bind_rows(df1,df2):
+    """
+    Function for bind two dataframes by row
+    
+    Parameters:
+    df1 (pandas.DataFrame): Dataframe 1
+    df2 (pandas.DataFrame): Dataframe 2
+
+    Returns:
+
+    df_f (pandas.DataFrame) row binded dataframe
+    """
+    df_f = pd.concat([df1, df2])
+    return df_f
 
 def merge_list(lst1, lst2):
             """Funciton to merge lists
@@ -27,6 +42,17 @@ def merge_list(lst1, lst2):
             return(ls)
 
 def read_Files(ruta, skip):
+
+    """
+    Function to read CPT format input data
+    
+    Parameters (str): Full path to file
+    Skip (int): Number of rows to ommit
+
+    Returns:
+
+    Pandas.DataFrame of CPT input file
+    """
     
     dataframe = pd.read_csv(ruta, sep='/t', engine='python', header=None)  # * El separador debe ser '\t' para indicar una tabulación
     
@@ -44,7 +70,7 @@ def read_Files(ruta, skip):
 
 def sum_df(df1, df2):
             """
-            Function extract tables from cca_loas_x.txt files and calculate the weigthed correlation
+            Function to Summ/add two dataframes element wise
 
             Parameters:
             df1 (pandas.DataFrame): first Dataframe
@@ -421,7 +447,8 @@ def files_y(y_d, names, main_dir):
         for i in range(data.shape[0]):
             fl.write("\t".join([str(x) for x in data.iloc[i]]))
             fl.write("\n")
-    return([x[0:8] for x in data.columns if x != " "])
+
+    return([x for x in data.columns if x != " "])
 
 def load_json(pth):
     """Function to read input params json file
@@ -691,37 +718,146 @@ def run_cpt(path_x, path_y, run, output, confi, p, type_trans):
         raise ValueError("Error when running CPT.bat file")
 
     return("ok")
-        
-def get_season_months(season_type, month, month_abb):
-    """Function to generate month season labs for folders names based on season type 
+
+def proba(
+    root_path:str
+    ,month:int
+    ,season_type:str
+    ,predictand:str
+    ,true_col_names:list
+    ,years_season:str):
+    """
+    Function to generate probability files from optimization process
+
     Parameters:
-    season_type (str): text identifier for season, extracted from imput params json file
-    month (int): Month number of inital month
+    root_path (str): full path to the optimal CPT output 
+    month (int): month number for season type (if season = tri --> month is the middle number else month is the first number)
+    season_type (str): long season type (Jul-Aug-Sep or Jul-Aug)
+    predictand (str): predictand used for forecasting
+    true_col_names (list): true names for files y stations
+    year_season (str): year for the season in str format
+
+    Returns:
+    df_final: dataFrame with probabilities
+    """ 
+    df_raw = pd.read_csv(root_path.replace("GI.txt", "prob.txt")
+                        ,skiprows=3 
+                        ,header=None
+                        ,sep='\t'
+                        , float_precision="high")
+    col_names = df_raw.iloc[0]
+    if (len(col_names)-1) != len(true_col_names):
+        raise ValueError("numero de columnas no concuerda con las del archivo de probabilidades")
+    
+    col_names[0] = "id"
+    col_names[1:] = true_col_names
+    df_raw = df_raw.iloc[[1,4, 7]]
+    df_raw.columns = col_names
+    df_raw.iloc[:,0] = ["below", "normal", "above"]
+    df_final = df_raw.transpose().reset_index()
+    df_final.columns =  df_final.iloc[0]
+    df_final = df_final[1:]
+    df_final['year'] = years_season
+    df_final["month"] = month
+    df_final["season"] = season_type
+    df_final["predictand"] = predictand
+
+    return df_final
+
+def metricas(
+        root_path:str
+        ,month:int
+        ,season_type:str
+        ,predictand:str
+        ,true_col_names:str
+        ,years_season:str
+        ):
+    """
+    Function to get metrics from CPT outputs
+        
+    Parameters:
+    root_path (str): full path to best_GI file
+    month (int): month number for season type (if season = tri --> month is the middle number else month is the first number)
+    season_type (str): long season type (Jul-Aug-Sep or Jul-Aug)
+    predictand (str): predictand used for forecasting
+    true_col_names (list): true names for files y stations
+    years_season (str): year for the season in str format
+
+    Returns:
+    df_final: dataFrame with metrics
+        
+    """
+    pearsonDf = pd.read_csv(root_path.replace("GI.txt", "pearson.txt")
+                            ,skiprows=3 
+                            ,header=None
+                            ,sep='\t'
+                            , float_precision="high"
+                            )
+    afcDf = pd.read_csv(root_path.replace("GI.txt", "2afc.txt")
+                            ,skiprows=3 
+                            ,header=None
+                            ,sep='\t'
+                            , float_precision="high"
+                            )
+    ccaDf = pd.read_csv(root_path.replace("GI.txt", "cca_cc.txt")
+                            ,skiprows=3 
+                            ,header=None
+                            ,sep='\t'
+                            , float_precision="high"
+                            )
+    giDf = pd.read_fwf(root_path
+                            ,skiprows=7 
+                            ,header=None
+                            ,sep='\t'
+                            , infer_nrows=True
+                            )
+    pearsonDf.columns    = ['Station','pearson']
+    pearsonDf['Station'] = true_col_names
+    afcDf.columns = ['Station','afc2']
+    afcDf['Station'] = true_col_names
+    ccaDf.columns = ['id','correlation']
+    giDf.columns = ['current_x','current_y','current_cca','current_index'
+                    ,'optimum_x','optimum_y','optimum_cca','optimum_index']
+    pearsonacfDf  = pearsonDf.merge(afcDf, on='Station') #,suffixes=['_pearson','_afc']
+    canonica= ccaDf[ccaDf.id  == 1].correlation.iloc[0]
+    goodness = giDf.iloc[giDf.shape[0]-1].optimum_index
+    pearsonacfDf['month'] = month
+    pearsonacfDf['year'] = years_season
+    pearsonacfDf['goodness']  = goodness
+    pearsonacfDf['canonica'] = canonica
+    pearsonacfDf.rename(columns = {'Station':'id'}, inplace = True)
+    #pearsonacfDf['seson'] =  season_type
+    #pearsonacfDf['predictand'] = predictand
+
+    return pearsonacfDf
+
+def get_season_months(season_lab, month_abb):
+    """Function to get month season number from json input file
+    Parameters:
+    season_lab (str): text identifier for season, extracted from imput params json file
     month_abb (list): Year months three letter abbreviation
 
     Returns:
-    list with the first letter of each month for each season
+    Month number int (if season type is trimestral then month number will be the middle month else will be the first month number of season)
     """
 
-    mnths = [month+x for x in [0,1,2,3,4,5]]
-    mnths = [x - 12 if x>12 else x for x in mnths]
-    if season_type == 'tri':
-        tri1 =  "".join([month_abb[x-1][0] for x in mnths[0:3]])
-        tri2 =  "".join([month_abb[x-1][0] for x in mnths[3:]])
-        to_ret = [tri1, tri2]
-    elif season_type == "bi":
-        bi1 =  "".join([month_abb[x-1][0] for x in mnths[0:2]])
-        bi2 =  "".join([month_abb[x-1][0] for x in mnths[2:4]])
-        bi3 =  "".join([month_abb[x-1][0] for x in mnths[4:]])
-        to_ret = [bi1, bi2, bi3]
+    mnths = season_lab.split("-")
+    if len(mnths) > 2:
+        mn_abb = mnths[1]
     else:
-        raise ValueError("Invalid seaso type")
-        
-    return(to_ret)
+        mn_abb = mnths[0]
+    
+    to_ret = [x+1 for x in range(len(month_abb)) if month_abb[x] == mn_abb]
+        #raise ValueError("Invalid seaso type")
+    if to_ret[0] > 12 or to_ret[0] < 0:
+        raise ValueError("Month number out of [0,12] range")
+
+    return(to_ret[0])
 
 def get_season_years(season_type, month, year):
     """Function to generate year season
     Parameters:
+
     season_type (str): text identifier for season, extracted from imput params json file
     month (int): Month number of inital month
     year (int): Year of system date
@@ -741,6 +877,18 @@ def get_season_years(season_type, month, year):
     return(to_ret)
 
 def best_GI(rutas):
+    """
+    Function to get Best GI filename from all optimization output files.
+
+    Parameters:
+
+    Rutas (list): list with all optimization output file paths
+
+    Returns:
+    
+    Filename of Best_GI
+    """
+
     valores = []  # Lista para almacenar los valores
 
     for ruta in rutas:
@@ -768,11 +916,14 @@ def best_GI(rutas):
 
 ######### Run #################
 start_time = date.today()
+month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 #options(timeout=180)
-##############################
+
+#########################################################
+########## NOT RUN ######################################
+#########################################################
 print(os.path.join("D:/", "andres"))
 #define some global variables (some paths should be already defined in runMain so may not be necesary here)
-month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 root_dir = os.path.join("D:"+os.sep, "documents_andres", "pr_1", "Colombia","inputs")
 main_dir  = os.path.join(root_dir, "prediccionClimatica")
 path_dpto = os.path.join(main_dir, 'estacionesMensuales')#dir_response
@@ -796,15 +947,20 @@ os.makedirs(path_save, exist_ok=True)
 #dirOutputs <- paste0(dirCurrent, "outputs/", sep = "", collapse = NULL)
 #dirPrediccionOutputs <- paste0(dirOutputs, "prediccionClimatica/", sep = "", collapse = NULL)
 #path_save <- paste0(dirPrediccionOutputs, "probForecast", sep = "", collapse = NULL)
+#########################################################
+########## END NOT RUN ##################################
+#########################################################
+
 
 dir_names = os.listdir(path_dpto)
-
 path_json = glob.glob(f"{path_dpto}\\**\\cpt_areas.json", recursive = True)
 init_params = {k: load_json(pth) for k,pth in zip(dir_names, path_json)}
 
-month  =  int(date.today().strftime("%m"))
-year   =  int(date.today().strftime("%Y"))
-season = {k: [x["season"] for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
+month        =  int(date.today().strftime("%m"))
+year         =  int(date.today().strftime("%Y"))
+season       = {k: [x["season"] for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
+month_season =  {k: [get_season_months(x["season"], month_abb = month_abb) for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
+predictands  =  {k: [x["predictand"] for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
 
 start_date = date.today()+ datetime.timedelta(days = 30)
 years = {k: get_season_years(season_type = value[0]["type"], month = month, year = year) for k,value in init_params.items()}
@@ -894,72 +1050,35 @@ for k in dir_names:
 best_decil_l ={k: [best_GI(glob.glob(v[j]+ "\\output"+"\\**_GI.txt")) for j in range(len(v))]  for k,v in path_months_l.items()}
 
 
-#####################################################
-######################################################
-######################################################
+metricas_all = {k: [ metricas(root_path = best_decil_l[k][v],month = month_season[k][v],season_type = season[k][v],predictand = predictands[k][v], true_col_names = part_id[k], years_season = years[k][v])for v in range(len(best_decil_l[k]))] for k in dir_names}
 
-def proba(root_path:str):
-    below = pd.read_csv(root_path.replace("GI.txt", "prob.txt")
-                            #,skiprows=3 
-                            ,header=None
-                            ,sep='\t'
-                            , float_precision="high"
-                            )
-    normal=
-    above = 
+metricas_final = []
+for k,v in metricas_all.items():
+    for j in range(len(v)):
+        metricas_final.append(metricas_all[k][j])
+metricas_final = reduce(bind_rows, metricas_final)
 
-    data = cbind
-    return data
+metricas_final.to_csv(
+    os.path.join(path_save, "metrics.csv")
+    ,float_format = float
+    ,index = False
+    )
 
 
-root_path = best_decil_l["58504322333cb94a800f809b"][0]
-def metricas(
-        root_path:str
-        ,month:str
-        ,season_type:str
-        ,predictand:str
-        ):
-    pearsonDf = pd.read_csv(root_path.replace("GI.txt", "pearson.txt")
-                            ,skiprows=3 
-                            ,header=None
-                            ,sep='\t'
-                            , float_precision="high"
-                            )
-    afcDf = pd.read_csv(root_path.replace("GI.txt", "2afc.txt")
-                            ,skiprows=3 
-                            ,header=None
-                            ,sep='\t'
-                            , float_precision="high"
-                            )
-    ccaDf = pd.read_csv(root_path.replace("GI.txt", "cca_cc.txt")
-                            ,skiprows=3 
-                            ,header=None
-                            ,sep='\t'
-                            , float_precision="high"
-                            )
-    giDf = pd.read_fwf(root_path
-                            ,skiprows=7 
-                            ,header=None
-                            ,sep='\t'
-                            , infer_nrows=True
-                            )
-    pearsonDf.columns = ['Station','value']
-    afcDf.columns = ['Station','value']
-    ccaDf.columns = ['id','correlation']
-    giDf.columns = ['current_x','current_y','current_cca','current_index'
-                    ,'optimum_x','optimum_y','optimum_cca','optimum_index']
-    pearsonacfDf  = pearsonDf.merge(afcDf, on='Station',suffixes=['_pearson','_afc'])
-    canonica= ccaDf[ccaDf.id  == 1].correlation.iloc[0]
-    goodness = giDf.iloc[giDf.shape[0]-1].optimum_index
-    pearsonacfDf['month'] = month
-    pearsonacfDf['goodness']  = goodness
-    pearsonacfDf['canonica'] = canonica
-    pearsonacfDf['type'] =  season_type
-    pearsonacfDf['predictand'] = predictand
+prob_all = {k: [ proba(root_path = best_decil_l[k][v],month = month_season[k][v],season_type = season[k][v],predictand = predictands[k][v], true_col_names = part_id[k], years_season = years[k][v])for v in range(len(best_decil_l[k]))] for k in dir_names}
 
-    return pearsonacfDf
+prob_final = []
+for k,v in prob_all.items():
+    for j in range(len(v)):
+        prob_final.append(prob_all[k][j])
+prob_final = reduce(bind_rows, prob_final)
 
+prob_final.to_excel(
+    os.path.join(path_save, "probabilities.xlsx")
+    ,float_format = float
+    ,index = False
+    )
 
-
-
-
+#####################################
+###### END #########################
+###################################
