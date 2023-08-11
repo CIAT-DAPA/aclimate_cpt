@@ -1093,7 +1093,7 @@ def cpt_merge_x_files(file_paths):
     if platform.system() == "Windows":
         cpt_batch = "CPT_batch.exe"
     elif platform.system() == "Linux":
-        cpt_batch = "/forecast/models/CPT/15.5.10/bin/CPT.x"
+        cpt_batch = "/forecast/models/CPT/15.5.3/bin/CPT.x"
 
     
     cmd_args = f"""@echo off
