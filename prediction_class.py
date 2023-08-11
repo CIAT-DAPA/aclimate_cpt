@@ -1294,7 +1294,7 @@ class AclimateDownloading():
         prob_final = reduce(self.bind_rows, prob_final)
 
         prob_final.to_csv(
-            os.path.join(self.path_save, "probabilities.xlsx")
+            os.path.join(self.path_save, "probabilities.csv")
             ,float_format = float
             ,index = False
             )
