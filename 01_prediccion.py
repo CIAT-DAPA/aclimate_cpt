@@ -1,11 +1,11 @@
 #pip install monthdelta
+#pip install tempfile
 import os
 import platform
 import pandas as pd
 import re
 import glob
 import datetime
-from datetime import date
 import json
 import numpy as np
 import gzip
@@ -13,6 +13,16 @@ import shutil
 from functools import reduce
 import itertools
 from monthdelta import monthdelta
+import requests
+import shutil
+import time
+from tqdm import tqdm
+import concurrent.futures
+from itertools import chain
+from datetime import date, datetime, timedelta
+import subprocess
+import tempfile
+import csv
 
 def bind_rows(df1,df2):
     """
@@ -161,6 +171,7 @@ def correl(x, y):
         nfields = int(loads.iloc[:,0].str.extract(r"cpt:nfields=([0-9]{1})").dropna().squeeze())
         loadings = loads.drop(range(2)).reset_index(drop= True)
         field_names = pd.Series(loadings.iloc[:, 0].str.extract("cpt:field=([A-Za-z]+)").dropna().squeeze().unique())
+        #field_names = [field_names[x]+"_"+str(x) for x in range(len(field_names))]
         ps = [np.where( loadings.iloc[:, 0].str.contains("cpt:field="))[0][x] for x in range(len(np.where( loadings.iloc[:, 0].str.contains("cpt:field="))[0]))]
         ps = [ps[x] for x in range(0, len(ps), int(len(ps)/nfields))]
         ps = ps + [loadings.shape[0]] 
@@ -168,7 +179,7 @@ def correl(x, y):
     
 
         to_ret = {k: get_cca_tables(spliteed[k], cor) for k,v in spliteed.items()}
-        
+        # loadings = spliteed[k]
     else:
         
         loadings = loads.drop(range(2)).reset_index(drop= True)
@@ -300,14 +311,14 @@ def run_optimization(raster, cor, out_file, path_y, dir_out_path, config, n_cols
     All CPT outputs
     """
     #how to run
-    # raster = tsm_o['58504322333cb94a800f809b'][1]
-    # cor    = cor_tsm['58504322333cb94a800f809b'][1]
-    # out_file = path_x['58504322333cb94a800f809b'][1]
-    # path_y = path_zone['58504322333cb94a800f809b']
-    # dir_out_path = path_months_l['58504322333cb94a800f809b'][1]
-    # config  = confi_l['58504322333cb94a800f809b'][1]
-    # n_cols = p_data['58504322333cb94a800f809b']
-    # data_trans = transform['58504322333cb94a800f809b'][1]
+    # raster = tsm_o['58504314333cb94a800f8098'][0]
+    # cor    = cor_tsm['58504314333cb94a800f8098'][0]
+    # out_file = path_x['58504314333cb94a800f8098'][0]
+    # path_y = path_zone['58504314333cb94a800f8098']
+    # dir_out_path = path_months_l['58504314333cb94a800f8098'][0]
+    # config  = confi_l['58504314333cb94a800f8098'][0]
+    # n_cols = p_data['58504314333cb94a800f8098']
+    # data_trans = transform['58504314333cb94a800f8098'][0]
 
     out_file_name = out_file.replace(".tsv", "") 
     print(f"  >> Season {os.path.basename(out_file_name)}")
@@ -332,10 +343,11 @@ def run_optimization(raster, cor, out_file, path_y, dir_out_path, config, n_cols
         
     if nfields > 1:
         
-        change_point =  [x for x in np.diff(idx)]
-        change_point = np.cumsum([change_point.count(x) for x in np.unique(change_point)])
-        change_point = change_point[ range(0, int(len(change_point)/nfields))].tolist() 
-        change_point = change_point + [len(idx) - change_point[len(change_point)-1]] 
+        change_point = np.where(tmp_df.iloc[:,0].str.contains("cpt:field="))[0].tolist()# [x for x in np.diff(idx)]
+        #change_point = np.cumsum([change_point.count(x) for x in np.unique(change_point)])
+        #change_point = change_point[ range(0, int(len(change_point)/nfields))].tolist()
+        change_point = [x for x in range(len(idx)) if idx[x] == change_point[1]] 
+        change_point =  change_point + [len(idx) - change_point[0]]
     
         labs = reduce(merge_list,[np.repeat(field_names[x],change_point[x]).tolist() for x in range(len(change_point)) ])
         if len(labs) != len(idx):
@@ -379,9 +391,10 @@ def run_optimization(raster, cor, out_file, path_y, dir_out_path, config, n_cols
             new_field_names = np.unique([labs[x]  for x in range(len(labs)-1) if empty_counter[x]]).tolist()
             nfields_new = "cpt:nfields="+str(len(new_field_names))
             if len(new_field_names) == 1:
-                to_remove = [idx[x] for x in range(len(idx)-1) if empty_counter[x]]
-                start_from = to_remove[0]
-                tmp_df_perc = tmp_df_perc.iloc[start_from:]
+                to_remove_idx = [x for x in range(len(idx)-1) if empty_counter[x]]
+                start_from = idx[to_remove_idx[0]]
+                end_pos    = idx[to_remove_idx[-1]+1]
+                tmp_df_perc = tmp_df_perc.iloc[start_from:end_pos]
         else:
             nfields_new = "cpt:nfields="+str(nfields)
 
@@ -407,8 +420,7 @@ def run_optimization(raster, cor, out_file, path_y, dir_out_path, config, n_cols
                     confi      = config,
                     p          = n_cols,
                     type_trans = data_trans )
-
-
+            
     return("Ok")
 
 def files_y(y_d, names, main_dir):
@@ -914,6 +926,226 @@ def best_GI(rutas):
         
     return best_gi[0]
 
+#### Functions to import ####
+
+class DownloadProgressBar(tqdm):
+    def update_to(self, b=1, bsize=1, tsize=None):
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)
+
+class DirectoryManager():
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # Function which creates a folder. It checks if the folders exist before
+    # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    # (string) path: Path where the folder should be create
+    def mkdir(self,path):
+        if path != "" and not os.path.exists(path): 
+            os.mkdir(path)
+                
+            
+    def makedirs(self,path):
+        if path != "" and not os.path.exists(path): 
+            os.makedirs(path)
+
+### Funtions #######
+
+def download_gz_predictor_file(url, path ,timeout=300):
+     # url = urls[0]
+     # path = all_path_down[0]
+    code = False
+    while code== False:
+        try:
+            response = requests.get(url, stream=True, timeout=timeout)
+            response.raise_for_status()  # Check for HTTP errors
+            
+            if(response.status_code != 200):
+                raise Exception("Code status error")
+            
+            # Obtener el tamaño esperado del archivo del encabezado "Content-Length"
+            expected_size = int(response.headers.get('Content-Length', 0))
+
+            # Descargar el archivo y verificar el tamaño
+            downloaded_size = 0
+            
+            progress_bar = tqdm(total=expected_size, unit='B', unit_scale=True, desc=path.split('/')[-1], miniters=1)
+
+            with open(path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    downloaded_size += len(chunk)
+                    f.write(chunk)
+                    progress_bar.update(len(chunk))
+            progress_bar.close()
+            
+            if downloaded_size == expected_size:
+                print(".gz file downloaded successfully")
+
+                # Descomprimir el archivo descargado
+                with gzip.open(path, 'rb') as f_in:
+                    with open(path.replace('.gz',''), 'wb') as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+                os.remove(path)
+                print(".gz file uncompressed successfully")
+                code = True
+                return print("Process done successfully")
+                
+            else:
+                print(f" Downloaded file size ({downloaded_size} bytes) doesn't match expected size ({expected_size} bytes).")
+                os.remove(path)
+        except (requests.exceptions.RequestException, IOError) as e:
+            print(f"Download failed: {e}")
+            os.remove(path)
+            
+
+    return False
+
+
+def json_to_df(json, dpto):
+    
+    json_df = pd.json_normalize(json, ["transformation"]  ,['type','season','predictand',"areas",['modes','x'],['modes','y'],['modes','cca']],errors='ignore')
+    json_df["dpto"]=dpto
+    return json_df
+
+def make_url(path,dpto,typel,season,areas):
+    #path = dir_save 
+    # dpto =list(merged_df["dpto"])[0]
+    # typel =list(merged_df["type"])[0]
+    # season =list(merged_df["season"])[0]
+    # areas =list(merged_df["areas"])[0]
+    print(dpto)
+    urls=[]
+    paths = []
+    path_descarga_dptos = os.path.join(path, dpto)
+    month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+    
+    
+    predictors = pd.json_normalize(areas)
+    predic_final = predictors.groupby('predictor').agg({"predictor":"count",'x_min':[lambda x: x.iloc[0], lambda x: x.iloc[1] if len(x) > 1 else None ] , 'x_max':[lambda x: x.iloc[0],lambda x: x.iloc[1] if len(x) > 1 else None ],'y_min':[lambda x: x.iloc[0],lambda x: x.iloc[1] if len(x) > 1 else None],'y_max':[lambda x: x.iloc[0],lambda x: x.iloc[1] if len(x) > 1 else None]}).reset_index()
+    
+    predic_final.columns = predic_final.columns.map('_'.join)
+    
+    date_st = datetime.now()- timedelta(days=30)
+    month_st = date_st.month
+    year_st = date_st.year
+    month_target = datetime.strptime(season.split('-')[0][:3], '%b').month
+    diff_month =(month_target - month_st) % 12
+    leng = 1 if typel=="bi" else 2
+    
+    for i  in range(predic_final.shape[0]):
+        
+        var_predic = predic_final.iloc[i,0]
+        num_areas  = predic_final.iloc[i,1]
+        
+        x_min_1 = predic_final.iloc[i,2];  x_max_1 = predic_final.iloc[i,4]
+        x_min_2 = predic_final.iloc[i,3];  x_max_2 = predic_final.iloc[i,5]
+        
+        y_min_1 = predic_final.iloc[i,6];  y_max_1 = predic_final.iloc[i,8]
+        y_min_2 = predic_final.iloc[i,7];  y_max_2 = predic_final.iloc[i,9]
+        
+        source = "/.OCNF/.surface/.TMP/" if var_predic=="sst" else "/.PGBF/.pressure_level/.UGRD/"
+        presion = "P/%28850%29/VALUES/"  if var_predic=="wind" else ""
+        print(month_abb)
+        if num_areas==1:
+            
+            url = "http://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.EMC/.CFSv2/.ENSEMBLE"+ source +"SOURCES/.NOAA/.NCEP/.EMC/.CFSv2/.REALTIME_ENSEMBLE"+ source +"appendstream/S/%280000%201%20"+  month_abb[month_st-1] +"%201982-" + str(year_st) + "%29/VALUES/L/"+ str(diff_month) +".5/" + str(diff_month+leng) + ".5/RANGE/%5BL%5D//keepgrids/average/" + presion + "M/1/24/RANGE/%5BM%5Daverage/X/" + str(x_min_1) + "/" + str(x_max_1) + "/flagrange/Y/"+ str(y_min_1) + "/" + str(y_max_1) + "/flagrange/add/1/flaggt/0/maskle/mul/-999/setmissing_value/%5BX/Y%5D%5BS/L/add/%5Dcptv10.tsv.gz"
+            
+        if num_areas==2:
+            
+            url = "http://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.EMC/.CFSv2/.ENSEMBLE"+ source +"SOURCES/.NOAA/.NCEP/.EMC/.CFSv2/.REALTIME_ENSEMBLE"+ source +"appendstream/S/%280000%201%20"+  month_abb[month_st-1] +"%201982-" + str(year_st) + "%29/VALUES/L/"+ str(diff_month) +".5/" + str(diff_month+leng) + ".5/RANGE/%5BL%5D//keepgrids/average/"+ presion +"M/1/24/RANGE/%5BM%5Daverage/X/" + str(x_min_1) + "/" + str(x_max_1) + "/flagrange/Y/"+ str(y_min_1) + "/" + str(y_max_1) + "/flagrange/add/1/flaggt/X/" + str(x_min_2) + "/" + str(x_max_2) +"/flagrange/Y/"+ str(y_min_2) + "/"+ str(y_max_2) +"/flagrange/add/1/flaggt/add/0/maskle/mul/-999/setmissing_value/%5BX/Y%5D%5BS/L/add/%5Dcptv10.tsv.gz"
+        
+  
+        file = str(month_abb[month_st-1]) + "_" + season + "_" + var_predic + ".tsv.gz"
+        path_before = os.path.join(path_descarga_dptos,season)
+        empty_0 = manager.makedirs(path_before)
+        path_last = os.path.join(path_before,file)
+        
+        urls.append(url)
+        paths.append(path_last)
+    total_predic = predic_final.shape[0]
+      
+    return urls, paths, total_predic
+
+
+def cpt_merge_x_files(file_paths):
+    #file_path_1 = 'D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_sst.tsv'
+    # file_path_2 = 'D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_wind.tsv'
+    # merged_out_path = 'D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_merged.tsv'
+    # Nombre del archivo temporal y lugar donde se va a copiar este archivo
+    #file_paths = ['D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_sst.tsv', 'D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_wind.tsv']
+    pos = np.where(np.array([x.find("wind") for x in file_paths])  >5)[0].tolist()[0]
+    if pos >= 1:
+        file_paths.reverse()
+
+    file_path_1 = file_paths[0]
+    file_path_2 = file_paths[1]
+    
+    df_temp = read_Files(file_path_1, skip = 0)
+    if df_temp.iloc[:,0].str.contains("aprod").any():
+        df_temp.iloc[:,0] = df_temp.iloc[:,0].str.replace("aprod", "UGRD")
+        df_temp.to_csv(file_path_1, sep ="\t", index = False, header= False,  quoting=csv.QUOTE_NONE)
+
+    merged_out_path = re.sub("[a-zA-Z]+.tsv", "merged.tsv", file_path_1 )
+
+    tmp_file = os.path.join(tempfile.gettempdir(), os.path.basename(tempfile.mktemp(suffix=".bat")))
+    
+    # argumentos para el batch
+    if platform.system() == "Windows":
+        cpt_batch = "CPT_batch.exe"
+    elif platform.system() == "Linux":
+        cpt_batch = "/forecast/models/CPT/15.5.10/bin/CPT.x"
+
+    
+    cmd_args = f"""@echo off
+        (
+        echo 611
+        echo 801
+        echo {file_path_1}
+        echo /
+        echo /
+        echo /
+        echo /
+        echo /
+        echo {file_path_2}
+        echo /
+        echo /
+        echo /
+        echo /
+        echo /
+        echo {merged_out_path}
+        echo 0
+        ) | {cpt_batch}"""
+    
+    with open(tmp_file, "w") as fl:
+            fl.write(cmd_args)
+    try:
+        if platform.system() == "Windows":
+            os.system(tmp_file)
+  
+        elif platform.system() == "Linux":
+            os.system("chmod +x"+tmp_file)
+            os.system(tmp_file)
+        # Ejecución de CPT     
+       
+        
+        # verificacion de que se creó el archivo tempora;l
+        if not os.path.exists(tmp_file):
+            status = "Failed: Error en la creación del archivo temporal"
+        else:
+            # copia del archivo a merged out path
+            #os.rename(tmp_file, merged_out_path)
+            os.remove(file_path_1)
+            os.remove(file_path_2)
+            status = "Success"
+    except subprocess.CalledProcessError:
+        status = "Failed: Error al ejecutar CPT_batch"
+    
+    return status
+
+
+#status = cpt_merge_x_files(file_path_1, file_path_2, merged_out_path)
+#print("Status:", status)
+
 ######### Run #################
 start_time = date.today()
 month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -961,8 +1193,11 @@ year         =  int(date.today().strftime("%Y"))
 season       = {k: [x["season"] for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
 month_season =  {k: [get_season_months(x["season"], month_abb = month_abb) for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
 predictands  =  {k: [x["predictand"] for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
+predictors  =  {k: [ len(np.unique(pd.DataFrame(x["areas"])["predictor"].to_numpy().tolist())) for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
 
-start_date = date.today()+ datetime.timedelta(days = 30)
+
+
+start_date = date.today()+ timedelta(days = 30)
 years = {k: get_season_years(season_type = value[0]["type"], month = month, year = year) for k,value in init_params.items()}
 
 path_months_l = {x: os.path.join(main_dir, "run_CPT", x) for x in dir_names}
@@ -979,21 +1214,40 @@ for value in path_down.values():
 
 path_areas = path_json
 
+path_estaciones_dptos_list = list(map(lambda x: os.path.join(path_dpto, x), dir_names))
+manager = DirectoryManager()
+path_confi_cpt_nested = list( map(lambda x:  glob.glob(os.path.join(x, '*cpt*')),  path_estaciones_dptos_list ))
+path_confi_cpt = list(itertools.chain.from_iterable(path_confi_cpt_nested))
+json_list_nested = list( map(lambda x: load_json(x), path_confi_cpt ))
+resul = list(map(lambda x,y : json_to_df(x,y), json_list_nested,dir_names))
+merged_df = pd.concat(resul, ignore_index=True)
+
+urls_nested, paths_nested, total_predic_nested = zip(*map(make_url ,[dir_save]*merged_df.shape[0] ,list(merged_df["dpto"]) ,list(merged_df["type"]) ,list(merged_df["season"]) , list(merged_df["areas"]) ))
+urls = list(chain(*urls_nested))
+all_path_down = list(chain(*paths_nested))
+#merge_when  = {k: [v[x] for x in range(len(v)) if int(v[x]) > 1 ] for k,v in predictors.items() }
+
+inicio = time.time()
+cores = 4
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=cores) as executor:
+            executor.map(download_gz_predictor_file, urls, all_path_down)
+
+fin = time.time()
+print(fin-inicio)
+
 print(" \n Archivos de entrada Descargados \n")
 
-all_path_down = {k: glob.glob(f"{v}\\**.tsv.gz") for k,v in path_down.items()}
-for k,v in all_path_down.items():
-    for pth in v:
-        if len(v) > 0:
-            try:
-                with gzip.open(pth, 'rb') as f_in:
-                    with open(pth.replace(".gz", ""), 'wb') as f_out:
-                        shutil.copyfileobj(f_in, f_out)
-            except:
-                print('Error when unzziping')
 
-all_path_unzziped = {k: glob.glob(f"{v}\\**.tsv") for k,v in path_down.items()}
+all_path_season_dir = {k: glob.glob(f"{v}\\**") for k,v in path_down.items()}
+all_path_files = {k: [ glob.glob(f"{x}\\**.tsv")  for x in v] for k,v in all_path_season_dir.items()}
 
+for k,v in predictors.items():
+    for x in range(len(v)):
+        if v[x] > 1:
+            cpt_merge_x_files(all_path_files[k][x])
+
+all_path_unzziped = {k: glob.glob(f"{v}\\**\\**.tsv") for k,v in path_down.items()}
 tsm_o = {k: [read_Files(pth, skip = 0) for pth in v]   for k,v in all_path_unzziped.items()}
 #time_sel = {k: {nm: get_cpt_dates(df) for nm,df in v.items()} for k,v in tsm_o.items()}
 
@@ -1009,7 +1263,7 @@ confi_l    = {k: [v[x]["modes"] for x in range(len(v)) if len(v[x]["modes"]) != 
 transform  =  {k: [v[x]["transformation"][0]["gamma"] for x in range(len(v)) if len(v[x]["transformation"]) != 0] for k,v in init_params.items()}
 p_data     = {k: v.shape[1]-2 for k,v in data_y.items() }  
 
-path_x     = {x: glob.glob(f"{os.path.join(dir_save,x)}\\**.tsv", recursive = True) for x in os.listdir(dir_save)}   # lapply(list.files(dir_save,full.names = T),function(x)list.files(x,recursive = T,full.names = T))
+path_x     = {x: glob.glob(f"{os.path.join(dir_save,x)}\\**\\**.tsv", recursive = True) for x in os.listdir(dir_save)}   # lapply(list.files(dir_save,full.names = T),function(x)list.files(x,recursive = T,full.names = T))
 path_zone  = {dir_names[x]: glob.glob(f"{os.path.join(main_dir, 'run_CPT')}\\**\\y_**.txt", recursive = True)[x] for x in range(len(dir_names))} #list.files(paste0(main_dir,"run_CPT"),full.names = T) %>% paste0(.,"/y_",list.files(path_dpto),".txt")
 path_output_pred = {k: [ os.path.join(pth, "output","0_") for pth in v] for k,v in path_months_l.items()}
 path_run         = {k: [ os.path.join(pth, "run_0"+ext_exe) for pth in v] for k,v in path_months_l.items()}#lapply(path_months_l,function(x)paste0(x,"/output/0_"))
@@ -1029,8 +1283,8 @@ for k in dir_names:
 print("\n Primera corrida realizada")
 
 
-path_cc   = {k: [x+"cca_cc.txt" for x in v] for k,v in path_output_pred.items()}
-path_load = {k: [x+"cca_load_x.txt" for x in v] for k,v in path_output_pred.items()}
+path_cc   = {k: [v[x]+"cca_cc.txt" for x in range(len(v))] for k,v in path_output_pred.items()}
+path_load = {k: [v[x]+"cca_load_x.txt" for x in range(len(v))] for k,v in path_output_pred.items()}
 cor_tsm   = {k: [correl(path_cc[k][n], path_load[k][n]) for n in range(len(path_cc[k]))   ] for k in dir_names}
 names_selec =  {k: [os.path.basename(path_x[k][x]).replace(".tsv", "") for x in  range(len(path_x[k])) ] for k,v in path_x.items()}
 
@@ -1048,8 +1302,6 @@ for k in dir_names:
                          ,data_trans = transform[k][j] )
 
 best_decil_l ={k: [best_GI(glob.glob(v[j]+ "\\output"+"\\**_GI.txt")) for j in range(len(v))]  for k,v in path_months_l.items()}
-
-
 metricas_all = {k: [ metricas(root_path = best_decil_l[k][v],month = month_season[k][v],season_type = season[k][v],predictand = predictands[k][v], true_col_names = part_id[k], years_season = years[k][v])for v in range(len(best_decil_l[k]))] for k in dir_names}
 
 metricas_final = []
