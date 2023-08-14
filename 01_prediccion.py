@@ -1072,7 +1072,7 @@ def cpt_merge_x_files(file_paths):
     # file_path_2 = 'D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_wind.tsv'
     # merged_out_path = 'D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_merged.tsv'
     # Nombre del archivo temporal y lugar donde se va a copiar este archivo
-    #file_paths = ['D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_sst.tsv', 'D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_wind.tsv']
+    #file_paths = ['Y:/CPT_merged/2014/input/sst_cfsv2/Apr_Jul-Aug.tsv',"Y:/CPT_merged/2014/input/U_wind/Apr_Jul-Aug_U_wind.tsv"]
     pos = np.where(np.array([x.find("wind") for x in file_paths])  >5)[0].tolist()[0]
     if pos >= 1:
         file_paths.reverse()
@@ -1156,14 +1156,14 @@ month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct
 #########################################################
 print(os.path.join("D:/", "andres"))
 #define some global variables (some paths should be already defined in runMain so may not be necesary here)
-root_dir = os.path.join("D:"+os.sep, "documents_andres", "pr_1", "Colombia","inputs")
+root_dir = os.path.join("D:"+os.sep, "documents_andres", "pr_R", "Colombia","inputs")
 main_dir  = os.path.join(root_dir, "prediccionClimatica")
 path_dpto = os.path.join(main_dir, 'estacionesMensuales')#dir_response
 dir_save  = os.path.join(main_dir, "descarga") #paste0(dirPrediccionInputs, "descarga", sep = "", collapse = NULL)
 os.makedirs(os.path.join(main_dir, "run_CPT"), exist_ok=True)
 os.makedirs(dir_save, exist_ok=True)
 ext_exe = ".bat"
-dirOutputs  = os.path.join("D:"+os.sep, "documents_andres", "pr_1", "Colombia", "outputs")
+dirOutputs  = os.path.join("D:"+os.sep, "documents_andres", "pr_R", "Colombia", "outputs")
 dirPrediccionOutputs  = os.path.join(dirOutputs, "prediccionClimatica")
 path_save = os.path.join(dirPrediccionOutputs, "probForecast")
 os.makedirs(path_save, exist_ok=True)
@@ -1244,7 +1244,7 @@ all_path_files = {k: [ glob.glob(f"{x}\\**.tsv")  for x in v] for k,v in all_pat
 
 for k,v in predictors.items():
     for x in range(len(v)):
-        if v[x] > 1:
+        if len(v[x]) > 1:
             cpt_merge_x_files(all_path_files[k][x])
 
 all_path_unzziped = {k: glob.glob(f"{v}\\**\\**.tsv") for k,v in path_down.items()}
