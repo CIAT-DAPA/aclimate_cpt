@@ -464,6 +464,10 @@ class AclimateDownloading():
         y_d["month"] = ["{:02d}".format(x) for x in y_d["month"]]
         y_m = y_d.apply(lambda x: str(int(x["year"]))+ '-' + x["month"], axis = 1)
         data = y_d.drop(labels = ["year", "month"], axis = 1)
+        na_pos = data.isna().all()
+        if any(na_pos):
+            print("Removing stations with full NA's")
+            data = data.iloc[:, np.where(~na_pos)[0].tolist()]
         p1="cpt:field=prcp, cpt:nrow="+str(data.shape[0])+", cpt:ncol="+str(data.shape[1])+", cpt:row=T, cpt:col=index, cpt:units=mm, cpt:missing=-999.000000000"
         data.insert(0, " ", y_m)
 
