@@ -1,0 +1,3 @@
+pandas==1.4.2
+tqdm==4.62.3
+monthdelta==2.1.0
