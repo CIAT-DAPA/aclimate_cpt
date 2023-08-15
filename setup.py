@@ -29,6 +29,7 @@ setup(
         "requests==2.27.1",
         "datetime==4.3",
         "xarray==0.20.2",
-        "dask==2023.1.0"
+        "dask==2023.1.0",
+        "monthdelta==0.9.1"
     ]
 )
