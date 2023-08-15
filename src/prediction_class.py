@@ -56,7 +56,6 @@ class AclimateDownloading():
         df1 (pandas.DataFrame): Dataframe 1
         df2 (pandas.DataFrame): Dataframe 2
 
-        Returns:
 
         df_f (pandas.DataFrame) row binded dataframe
         """
@@ -1152,7 +1151,8 @@ class AclimateDownloading():
     def run_master(self):
 
         dir_names = os.listdir(self.path_inputs_monthly_stations)
-        path_json = glob.glob(f"{self.path_inputs_monthly_stations}\\**\\cpt_areas.json", recursive = True)
+        #path_json = glob.glob(f"{self.path_inputs_monthly_stations}\\**\\cpt_areas.json", recursive = True)
+        path_json = glob.glob(os.path.join(self.path_inputs_monthly_stations, '**', 'cpt_areas.json'), recursive=True)
         init_params = {k: self.load_json(pth) for k,pth in zip(dir_names, path_json)}
         month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
         ext_exe = ".bat"
@@ -1205,21 +1205,29 @@ class AclimateDownloading():
 
 
 
-        all_path_season_dir = {k: glob.glob(f"{v}\\**") for k,v in path_down.items()}
-        all_path_files = {k: [ glob.glob(f"{x}\\**.tsv")  for x in v] for k,v in all_path_season_dir.items()}
+       # all_path_season_dir = {k: glob.glob(f"{v}\\**") for k,v in path_down.items()}
+       # all_path_files = {k: [ glob.glob(f"{x}\\**.tsv")  for x in v] for k,v in all_path_season_dir.items()}
+
+        all_path_season_dir = {k: glob.glob(os.path.join(v, '**')) for k, v in path_down.items()}
+        all_path_files = {k: [glob.glob(os.path.join(x, '**/*.tsv')) for x in v] for k, v in all_path_season_dir.items()}
 
         for k,v in predictors.items():
             for x in range(len(v)):
                 if len(v[x]) > 1:
                     self.cpt_merge_x_files(all_path_files[k][x])
 
-        all_path_unzziped = {k: glob.glob(f"{v}\\**\\**.tsv") for k,v in path_down.items()}
+        #all_path_unzziped = {k: glob.glob(f"{v}\\**\\**.tsv") for k,v in path_down.items()}
+        all_path_unzziped = {k: glob.glob(os.path.join(v, '**', '**.tsv')) for k, v in path_down.items()}
+
+
+
         tsm_o = {k: [self.read_Files(pth, skip = 0) for pth in v]   for k,v in all_path_unzziped.items()}
         #time_sel = {k: {nm: get_cpt_dates(df) for nm,df in v.items()} for k,v in tsm_o.items()}
 
         print("\n Archivos de entrada cargados")
        
-        path_stations = glob.glob(f"{self.path_inputs_monthly_stations}\\**\\stations.csv", recursive = True)
+        #path_stations = glob.glob(f"{self.path_inputs_monthly_stations}\\**\\stations.csv", recursive = True)
+        path_stations = glob.glob(os.path.join(self.path_inputs_monthly_stations, '**', 'stations.csv'), recursive=True)
         data_y = {k: pd.read_csv(fl) for k,fl in zip(dir_names, path_stations)}
         part_id = {k: self.files_y(df, k, main_dir = self.path_inputs_prediccion) for k,df in data_y.items()}
 
@@ -1229,8 +1237,12 @@ class AclimateDownloading():
         transform  =  {k: [v[x]["transformation"][0]["gamma"] for x in range(len(v)) if len(v[x]["transformation"]) != 0] for k,v in init_params.items()}
         p_data     = {k: v.shape[1]-2 for k,v in data_y.items() }  
 
-        path_x     = {x: glob.glob(f"{os.path.join(self.path_inputs_downloads,x)}\\**.tsv", recursive = True) for x in os.listdir(self.path_inputs_downloads)}   # lapply(list.files(dir_save,full.names = T),function(x)list.files(x,recursive = T,full.names = T))
-        path_zone  = {dir_names[x]: glob.glob(f"{os.path.join(self.path_inputs_prediccion, 'run_CPT')}\\**\\y_**.txt", recursive = True)[x] for x in range(len(dir_names))} #list.files(paste0(main_dir,"run_CPT"),full.names = T) %>% paste0(.,"/y_",list.files(path_dpto),".txt")
+        #path_x     = {x: glob.glob(f"{os.path.join(self.path_inputs_downloads,x)}\\**.tsv", recursive = True) for x in os.listdir(self.path_inputs_downloads)}   # lapply(list.files(dir_save,full.names = T),function(x)list.files(x,recursive = T,full.names = T))
+        path_x = {x: glob.glob(os.path.join(self.path_inputs_downloads, x, '**.tsv'), recursive=True) for x in os.listdir(self.path_inputs_downloads)}
+
+        #path_zone  = {dir_names[x]: glob.glob(f"{os.path.join(self.path_inputs_prediccion, 'run_CPT')}\\**\\y_**.txt", recursive = True)[x] for x in range(len(dir_names))} #list.files(paste0(main_dir,"run_CPT"),full.names = T) %>% paste0(.,"/y_",list.files(path_dpto),".txt")
+        path_zone = {dir_names[x]: glob.glob(os.path.join(self.path_inputs_prediccion, 'run_CPT', '**', f'y_{list(files)[x]}.txt'), recursive=True)[x] for x in range(len(dir_names))}
+
         path_output_pred = {k: [ os.path.join(pth, "output","0_") for pth in v] for k,v in path_months_l.items()}
         path_run         = {k: [ os.path.join(pth, "run_0"+ext_exe) for pth in v] for k,v in path_months_l.items()}#lapply(path_months_l,function(x)paste0(x,"/output/0_"))
 
@@ -1271,7 +1283,8 @@ class AclimateDownloading():
                                 ,n_cols = p_data[k]
                                 ,data_trans = transform[k][j] )
 
-        best_decil_l ={k: [self.best_GI(glob.glob(v[j]+ "\\output"+"\\**_GI.txt")) for j in range(len(v))]  for k,v in path_months_l.items()}
+       # best_decil_l ={k: [self.best_GI(glob.glob(v[j]+ "\\output"+"\\**_GI.txt")) for j in range(len(v))]  for k,v in path_months_l.items()}
+        best_decil_l = {k: [self.best_GI(glob.glob(os.path.join(v[j], "output", '**_GI.txt'))) for j in range(len(v))] for k, v in path_months_l.items()}
 
 
         metricas_all = {k: [ self.metricas(root_path = best_decil_l[k][v],month = month_season[k][v],season_type = season[k][v],predictand = predictands[k][v], true_col_names = part_id[k], years_season = years[k][v])for v in range(len(best_decil_l[k]))] for k in dir_names}
