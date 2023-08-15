@@ -24,7 +24,7 @@ import subprocess
 import tempfile
 import csv
 from dateutil.relativedelta import relativedelta
-from tools_d_r import DownloadProgressBar,DirectoryManager
+from aclimate_prediction.tools_d_r import DownloadProgressBar,DirectoryManager
 
 class AclimateDownloading():
 

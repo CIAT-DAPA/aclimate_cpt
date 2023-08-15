@@ -1,0 +1,132 @@
+
+name: Devops Aclimate Prediction
+
+on:
+  push:
+    branches: [ "stage" ]
+    tags:
+    - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+
+# ------- START Scripts PROCCESS -------- #
+
+  TestScripts:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.9"
+    - name: Create environment
+      run: |
+        python -m venv env
+    - name: Active environment
+      run: |
+        source env/bin/activate
+    - name: Install dependencies
+      run: |
+        pip install -r ./requirements.txt
+    - name: Run Tests
+      run: |
+        python -m unittest discover -s ./tests/ 
+
+# ------- END Scripts PROCCESS -------- #    
+
+# ------- START MERGE PROCCESS -------- #
+
+  MergeMainScripts:
+    needs: TestScripts
+    name: Merge Stage with main
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Merge stage -> main
+        uses: devmasx/merge-branch@master
+        with:
+          type: now
+          head_to_merge: ${{ github.ref }}
+          target_branch: main
+          github_token: ${{ github.token }}
+
+# ------- END MERGE PROCCESS -------- #
+
+# ------- START RELEASE PROCCESS -------- #
+
+  PostRelease:
+    needs: MergeMainScripts
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: '0'
+    # Scripts Zip
+    - name: Zip artifact for deployment
+      run: zip releaseScripts.zip ./src/* -r
+    # Upload Artifacts
+    - name: Upload Scripts artifact for deployment job
+      uses: actions/upload-artifact@v3
+      with:
+        name: Scripts
+        path: releaseScripts.zip
+    # Generate Tagname
+    - name: Generate Tagname for release
+      id: taggerDryRun
+      uses: anothrNick/github-tag-action@1.61.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        WITH_V: true
+        DRY_RUN: true
+        DEFAULT_BUMP: patch
+        RELEASE_BRANCHES : stage,main
+        BRANCH_HISTORY: last
+    # Create release
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        tag_name: ${{ steps.taggerDryRun.outputs.new_tag }}
+        release_name: Release ${{ steps.taggerDryRun.outputs.new_tag }}
+        #body_path: ./body.md
+        body: ${{ github.event.head_commit.message }}
+        draft: false
+        prerelease: false
+    # Upload Assets to release
+    - name: Upload Release Asset Scripts
+      id: upload-scripts-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+        asset_path: ./releaseScripts.zip
+        asset_name: releaseScripts.zip
+        asset_content_type: application/zip
+     # update version setup.py
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        ref: main
+    - name: Update version
+      run: |
+        sed -i "s/version='.*'/version='${{ steps.taggerDryRun.outputs.new_tag }}'/" setup.py
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Commit changes
+      uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        commit_message: "Update version to ${{ steps.taggerDryRun.outputs.new_tag }}"
+
+# ------- END RELEASE PROCCESS -------- #
