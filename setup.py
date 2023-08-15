@@ -1,0 +1,35 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="aclimate_prediction",
+    version='v1.0.0',
+    author="stevensotelo",
+    author_email="h.sotelo@cgiar.com",
+    description="Prediction module",
+    url="https://github.com/CIAT-DAPA/aclimate_cpt",
+    download_url="https://github.com/CIAT-DAPA/aclimate_cpt",
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
+    keywords='prediction aclimate',
+    entry_points={
+        'console_scripts': [
+            'prediction=aclimate_prediction.aclimate_run_cpt:main',
+        ],
+    },
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "Operating System :: OS Independent",
+    ],
+    python_requires=">=3.6",
+    install_requires=[
+        "pandas==1.4.2",
+        "tqdm==4.62.3",
+        "monthdelta==2.1.0",
+        "numpy==1.22.3",
+        "matplotlib==3.5.1",
+        "requests==2.27.1",
+        "datetime==4.3",
+        "xarray==0.20.2",
+        "dask==2023.0.2"
+    ]
+)
