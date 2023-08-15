@@ -24,7 +24,6 @@ setup(
     install_requires=[
         "pandas==1.4.2",
         "tqdm==4.62.3",
-        "monthdelta==2.1.0",
         "numpy==1.22.3",
         "matplotlib==3.5.1",
         "requests==2.27.1",
