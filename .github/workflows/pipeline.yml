@@ -32,7 +32,7 @@ jobs:
         source env/bin/activate
     - name: Install dependencies
       run: |
-        pip install -r ./requirements.txt
+        pip install -r ./requirements_test.txt
     - name: Run Tests
       run: |
         python -m unittest discover -s ./tests/ 
