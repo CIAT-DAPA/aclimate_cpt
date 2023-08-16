@@ -13,7 +13,7 @@ setup(
     keywords='prediction aclimate',
     entry_points={
         'console_scripts': [
-            'aclimate_cpt=aclimate_prediction.aclimate_run_cpt:main',
+            'aclimate_cpt=aclimate_cpt.aclimate_run_cpt:main',
         ],
     },
     classifiers=[
