@@ -1078,72 +1078,78 @@ def cpt_merge_x_files(file_paths):
     # merged_out_path = 'D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_merged.tsv'
     # Nombre del archivo temporal y lugar donde se va a copiar este archivo
     #file_paths = ['Y:/CPT_merged/2014/input/sst_cfsv2/Apr_Jul-Aug.tsv',"Y:/CPT_merged/2014/input/U_wind/Apr_Jul-Aug_U_wind.tsv"]
-    pos = np.where(np.array([x.find("wind") for x in file_paths])  >5)[0].tolist()[0]
-    if pos >= 1:
-        file_paths.reverse()
-
-    file_path_1 = file_paths[0]
-    file_path_2 = file_paths[1]
     
-    df_temp = read_Files(file_path_1, skip = 0)
-    if df_temp.iloc[:,0].str.contains("aprod").any():
-        df_temp.iloc[:,0] = df_temp.iloc[:,0].str.replace("aprod", "UGRD")
-        df_temp.to_csv(file_path_1, sep ="\t", index = False, header= False,  quoting=csv.QUOTE_NONE)
+    pos = np.where(np.array([x.find("wind") for x in file_paths])  >5)[0].tolist()
+    if len(pos) != 0:
+        pos = pos[0]
+        if pos >= 1:
+            file_paths.reverse()
 
-    merged_out_path = re.sub("[a-zA-Z]+.tsv", "merged.tsv", file_path_1 )
-
-    tmp_file = os.path.join(tempfile.gettempdir(), os.path.basename(tempfile.mktemp(suffix=".bat")))
-    
-    # argumentos para el batch
-    if platform.system() == "Windows":
-        cpt_batch = "CPT_batch.exe"
-    elif platform.system() == "Linux":
-        cpt_batch = "/forecast/models/CPT/15.5.3/bin/CPT.x"
-
-    
-    cmd_args = f"""@echo off
-        (
-        echo 611
-        echo 801
-        echo {file_path_1}
-        echo /
-        echo /
-        echo /
-        echo /
-        echo /
-        echo {file_path_2}
-        echo /
-        echo /
-        echo /
-        echo /
-        echo /
-        echo {merged_out_path}
-        echo 0
-        ) | {cpt_batch}"""
-    
-    with open(tmp_file, "w") as fl:
-            fl.write(cmd_args)
-    try:
-        if platform.system() == "Windows":
-            os.system(tmp_file)
-  
-        elif platform.system() == "Linux":
-            os.system("chmod +x"+tmp_file)
-            os.system(tmp_file)
-        # Ejecución de CPT     
-       
+        file_path_1 = file_paths[0]
+        file_path_2 = file_paths[1]
         
-        # verificacion de que se creó el archivo tempora;l
-        if not os.path.exists(tmp_file):
-            status = "Failed: Error en la creación del archivo temporal"
-        else:
-            # copia del archivo a merged out path
-            #os.rename(tmp_file, merged_out_path)
-            os.remove(file_path_1)
-            os.remove(file_path_2)
-            status = "Success"
-    except subprocess.CalledProcessError:
-        status = "Failed: Error al ejecutar CPT_batch"
+        df_temp = read_Files(file_path_1, skip = 0)
+        if df_temp.iloc[:,0].str.contains("aprod").any():
+            df_temp.iloc[:,0] = df_temp.iloc[:,0].str.replace("aprod", "UGRD")
+            df_temp.to_csv(file_path_1, sep ="\t", index = False, header= False,  quoting=csv.QUOTE_NONE)
+
+        merged_out_path = re.sub("[a-zA-Z]+.tsv", "merged.tsv", file_path_1 )
+
+        tmp_file = os.path.join(tempfile.gettempdir(), os.path.basename(tempfile.mktemp(suffix=".bat")))
+        
+        # argumentos para el batch
+        if platform.system() == "Windows":
+            cpt_batch = "CPT_batch.exe"
+        elif platform.system() == "Linux":
+            cpt_batch = "/forecast/models/CPT/15.5.3/bin/CPT.x"
+
+        
+        cmd_args = f"""@echo off
+            (
+            echo 611
+            echo 801
+            echo {file_path_1}
+            echo /
+            echo /
+            echo /
+            echo /
+            echo /
+            echo {file_path_2}
+            echo /
+            echo /
+            echo /
+            echo /
+            echo /
+            echo {merged_out_path}
+            echo 0
+            ) | {cpt_batch}"""
+        
+        with open(tmp_file, "w") as fl:
+                fl.write(cmd_args)
+        try:
+            if platform.system() == "Windows":
+                os.system(tmp_file)
+    
+            elif platform.system() == "Linux":
+                os.system("chmod +x"+tmp_file)
+                os.system(tmp_file)
+            # Ejecución de CPT     
+        
+            
+            # verificacion de que se creó el archivo tempora;l
+            if not os.path.exists(tmp_file):
+                status = "Failed: Error en la creación del archivo temporal"
+            else:
+                # copia del archivo a merged out path
+                #os.rename(tmp_file, merged_out_path)
+                os.remove(file_path_1)
+                os.remove(file_path_2)
+                status = "Success"
+        except subprocess.CalledProcessError:
+            status = "Failed: Error al ejecutar CPT_batch"
+    else:
+        print(f"No wind file was found on file_path list ommiting merge files process. {file_paths}")
+    
     
     return status
 
@@ -1161,14 +1167,14 @@ month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct
 #########################################################
 print(os.path.join("D:/", "andres"))
 #define some global variables (some paths should be already defined in runMain so may not be necesary here)
-root_dir = os.path.join("D:"+os.sep, "documents_andres", "pr_R", "Colombia","inputs")
+root_dir = os.path.join("D:"+os.sep, "documents_andres", "pr_1", "Colombia","inputs")
 main_dir  = os.path.join(root_dir, "prediccionClimatica")
 path_dpto = os.path.join(main_dir, 'estacionesMensuales')#dir_response
 dir_save  = os.path.join(main_dir, "descarga") #paste0(dirPrediccionInputs, "descarga", sep = "", collapse = NULL)
 os.makedirs(os.path.join(main_dir, "run_CPT"), exist_ok=True)
 os.makedirs(dir_save, exist_ok=True)
 ext_exe = ".bat"
-dirOutputs  = os.path.join("D:"+os.sep, "documents_andres", "pr_R", "Colombia", "outputs")
+dirOutputs  = os.path.join("D:"+os.sep, "documents_andres", "pr_1", "Colombia", "outputs")
 dirPrediccionOutputs  = os.path.join(dirOutputs, "prediccionClimatica")
 path_save = os.path.join(dirPrediccionOutputs, "probForecast")
 os.makedirs(path_save, exist_ok=True)
@@ -1249,7 +1255,10 @@ all_path_files = {k: [ glob.glob(f"{x}\\**.tsv")  for x in v] for k,v in all_pat
 
 for k,v in predictors.items():
     for x in range(len(v)):
-        if len(v[x]) > 1:
+        if v[x] > 1:
+            print(k)
+            #print(x)
+            #print(all_path_files[k][x])
             cpt_merge_x_files(all_path_files[k][x])
 
 all_path_unzziped = {k: glob.glob(f"{v}\\**\\**.tsv") for k,v in path_down.items()}
