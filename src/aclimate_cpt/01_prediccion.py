@@ -549,7 +549,7 @@ def run_cpt(path_x, path_y, run, output, confi, p, type_trans):
     
     
     if platform.system() == "Windows":
-        cpt_batch = "CPT_batch.exe"
+        cpt_batch = "C:\\CPT_15_5_10\\CPT_batch.exe"
     elif platform.system() == "Linux":
         cpt_batch = "/forecast/models/CPT/15.5.10/bin/CPT.x"
         
