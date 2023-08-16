@@ -1149,6 +1149,7 @@ def cpt_merge_x_files(file_paths):
             status = "Failed: Error al ejecutar CPT_batch"
     else:
         print(f"No wind file was found on file_path list ommiting merge files process. {file_paths}")
+        status = "Failed: Error al ejecutar CPT_batch for merging"
     
     
     return status
