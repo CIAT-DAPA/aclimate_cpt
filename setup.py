@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="aclimate_prediction",
+    name="aclimate_cpt",
     version='v1.0.0',
     author="stevensotelo",
     author_email="h.sotelo@cgiar.com",
@@ -13,7 +13,7 @@ setup(
     keywords='prediction aclimate',
     entry_points={
         'console_scripts': [
-            'prediction=aclimate_prediction.aclimate_run_cpt:main',
+            'aclimate_cpt=aclimate_prediction.aclimate_run_cpt:main',
         ],
     },
     classifiers=[
