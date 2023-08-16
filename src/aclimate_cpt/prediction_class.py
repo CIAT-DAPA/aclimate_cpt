@@ -1071,7 +1071,7 @@ class AclimateDownloading():
         return urls, paths, total_predic
 
     
-    def cpt_merge_x_files(file_paths):
+    def cpt_merge_x_files(self, file_paths):
         #file_path_1 = 'D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_sst.tsv'
         # file_path_2 = 'D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_wind.tsv'
         # merged_out_path = 'D:\\documents_andres\\pr_1\\Colombia\\inputs\\prediccionClimatica\\descarga\\58504314333cb94a800f8098\\Aug-Sep-Oct\\Jul_Aug-Sep-Oct_merged.tsv'
@@ -1087,7 +1087,7 @@ class AclimateDownloading():
             file_path_1 = file_paths[0]
             file_path_2 = file_paths[1]
             
-            df_temp = read_Files(file_path_1, skip = 0)
+            df_temp = self.read_Files(file_path_1, skip = 0)
             if df_temp.iloc[:,0].str.contains("aprod").any():
                 df_temp.iloc[:,0] = df_temp.iloc[:,0].str.replace("aprod", "UGRD")
                 df_temp.to_csv(file_path_1, sep ="\t", index = False, header= False,  quoting=csv.QUOTE_NONE)
