@@ -6,7 +6,7 @@ test_dir = os.path.dirname(__file__)
 src_dir = os.path.abspath(os.path.join(test_dir, '..', 'src'))
 sys.path.insert(0, src_dir)
 
-from src.aclimate_prediction.prediction_class import AclimateDownloading
+from src.aclimate_cpt.prediction_class import AclimateDownloading
 
 class TestAclimateDownloading(unittest.TestCase):
 
