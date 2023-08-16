@@ -24,7 +24,8 @@ setup(
     install_requires=[
         "pandas==1.4.2",
         "tqdm==4.62.3",
-        "numpy==1.22.3",
+        "numpy==1.25.2",
+        "opencv-python==4.8.0.76",
         "matplotlib==3.5.1",
         "requests==2.27.1",
         "datetime==4.3",
