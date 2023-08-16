@@ -1,7 +1,7 @@
 import os
 from datetime import date
 import argparse
-from aclimate_prediction.prediction_class import AclimateDownloading
+from aclimate_cpt.prediction_class import AclimateDownloading
 
 
 def main():
