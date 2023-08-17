@@ -1219,6 +1219,9 @@ class AclimateDownloading():
         for k,v in predictors.items():
             for x in range(len(v)):
                 if v[x] > 1:
+                    print(k)
+                    print(f">{v[x]}")
+                    print(f">>>{all_path_files[k][x]}")
                     self.cpt_merge_x_files(all_path_files[k][x])
 
         #all_path_unzziped = {k: glob.glob(f"{v}\\**\\**.tsv") for k,v in path_down.items()}
