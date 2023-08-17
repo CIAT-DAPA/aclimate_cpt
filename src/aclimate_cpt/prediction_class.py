@@ -1225,9 +1225,9 @@ class AclimateDownloading():
 
 
         all_path_season_dir = {k: glob.glob(os.path.join(v, '**')) for k, v in path_down.items()}
-        all_path_files = {k: [glob.glob(os.path.join(x, '**/*.tsv')) for x in v] for k, v in all_path_season_dir.items()}
+        all_path_files = {k: [glob.glob(os.path.join(x,'**.tsv')) for x in v] for k, v in all_path_season_dir.items()}
         
-        for v in all_path_season_dir.values():
+        for v in all_path_files.values():
             for x in range(len(v)):
                 print(f"path is: {v[x]}")
         
@@ -1263,7 +1263,7 @@ class AclimateDownloading():
         path_x = {x: glob.glob(os.path.join(self.path_inputs_downloads, x, '**.tsv'), recursive=True) for x in os.listdir(self.path_inputs_downloads)}
 
         #path_zone  = {dir_names[x]: glob.glob(f"{os.path.join(self.path_inputs_prediccion, 'run_CPT')}\\**\\y_**.txt", recursive = True)[x] for x in range(len(dir_names))} #list.files(paste0(main_dir,"run_CPT"),full.names = T) %>% paste0(.,"/y_",list.files(path_dpto),".txt")
-        path_zone = {dir_names[x]: glob.glob(os.path.join(self.path_inputs_prediccion, 'run_CPT', '**', f'y_{list(files)[x]}.txt'), recursive=True)[x] for x in range(len(dir_names))}
+        path_zone = {dir_names[x]: glob.glob(os.path.join(self.path_inputs_prediccion, 'run_CPT', '**', 'y_**.txt'), recursive=True)[x] for x in range(len(dir_names))}
 
         path_output_pred = {k: [ os.path.join(pth, "output","0_") for pth in v] for k,v in path_months_l.items()}
         path_run         = {k: [ os.path.join(pth, "run_0"+ext_exe) for pth in v] for k,v in path_months_l.items()}#lapply(path_months_l,function(x)paste0(x,"/output/0_"))
