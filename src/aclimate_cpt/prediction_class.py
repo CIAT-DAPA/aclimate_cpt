@@ -1215,6 +1215,14 @@ class AclimateDownloading():
         
         for k,v in path_down.items():
             print(f"checkin for downloads path for {k} which is : {v}")
+            print(">>>iniciando prueba de glob para: \n")
+            print(v)
+            print(f"      glob 1 test: {glob.glob(os.path.join(v, '**'))}")
+            rel_pth  = f"{v}{os.sep}**"
+            print(rel_pth)
+            print(f"      glob 2 test: {glob.glob(rel_pth)}")
+
+
 
         all_path_season_dir = {k: glob.glob(os.path.join(v, '**')) for k, v in path_down.items()}
         all_path_files = {k: [glob.glob(os.path.join(x, '**/*.tsv')) for x in v] for k, v in all_path_season_dir.items()}
@@ -1234,8 +1242,6 @@ class AclimateDownloading():
 
         #all_path_unzziped = {k: glob.glob(f"{v}\\**\\**.tsv") for k,v in path_down.items()}
         all_path_unzziped = {k: glob.glob(os.path.join(v, '**', '**.tsv')) for k, v in path_down.items()}
-
-
 
         tsm_o = {k: [self.read_Files(pth, skip = 0) for pth in v]   for k,v in all_path_unzziped.items()}
         #time_sel = {k: {nm: get_cpt_dates(df) for nm,df in v.items()} for k,v in tsm_o.items()}
