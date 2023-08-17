@@ -1212,6 +1212,9 @@ class AclimateDownloading():
 
        # all_path_season_dir = {k: glob.glob(f"{v}\\**") for k,v in path_down.items()}
        # all_path_files = {k: [ glob.glob(f"{x}\\**.tsv")  for x in v] for k,v in all_path_season_dir.items()}
+        
+        for k,v in path_down.items():
+            print(f"checkin for downloads path for {k} which is : {v}")
 
         all_path_season_dir = {k: glob.glob(os.path.join(v, '**')) for k, v in path_down.items()}
         all_path_files = {k: [glob.glob(os.path.join(x, '**/*.tsv')) for x in v] for k, v in all_path_season_dir.items()}
