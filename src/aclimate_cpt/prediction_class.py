@@ -1215,6 +1215,11 @@ class AclimateDownloading():
 
         all_path_season_dir = {k: glob.glob(os.path.join(v, '**')) for k, v in path_down.items()}
         all_path_files = {k: [glob.glob(os.path.join(x, '**/*.tsv')) for x in v] for k, v in all_path_season_dir.items()}
+        
+        for v in all_path_season_dir.values():
+            for x in range(len(v)):
+                print(f"path is: {v[x]}")
+        
 
         for k,v in predictors.items():
             for x in range(len(v)):
