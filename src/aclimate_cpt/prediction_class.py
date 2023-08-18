@@ -42,7 +42,7 @@ class AclimateDownloading():
      self.path_inputs_run = os.path.join(self.path_inputs_prediccion,"run_CPT")
      self.path_outputs = os.path.join(self.path,self.country,"outputs")
      self.path_outputs_prediccion = os.path.join(self.path_outputs,"prediccionClimatica")
-     self.path_save = os.path.join(self.path_outputs,"probForecast")
+     self.path_save = os.path.join(self.path_outputs_prediccion,"probForecast")
 
      pass
 
