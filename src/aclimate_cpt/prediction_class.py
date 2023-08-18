@@ -1168,7 +1168,8 @@ class AclimateDownloading():
         month_season =  {k: [self.get_season_months(x["season"], month_abb = month_abb) for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
         predictands  =  {k: [x["predictand"] for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
         predictors  =  {k: [ len(np.unique(pd.DataFrame(x["areas"])["predictor"].to_numpy().tolist())) for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
-
+        print(predictors)
+        time.sleep(5)
         #start_date = date.today()+ datetime.timedelta(days = 30)
         years = {k: self.get_season_years(season_type = value[0]["type"], month = self.month, year = self.year) for k,value in init_params.items()}
 
