@@ -1243,7 +1243,7 @@ class AclimateDownloading():
         p_data     = {k: v.shape[1]-2 for k,v in data_y.items() }  
 
         #path_x     = {x: glob.glob(f"{os.path.join(self.path_inputs_downloads,x)}\\**.tsv", recursive = True) for x in os.listdir(self.path_inputs_downloads)}   # lapply(list.files(dir_save,full.names = T),function(x)list.files(x,recursive = T,full.names = T))
-        path_x = {k: [glob.glob(os.path.join(path_down[k], x, "**.tsv"), recursive=True) for x in v] for k,v in season.items()}#{x: glob.glob(os.path.join(x, '**.tsv'), recursive=True) for x in os.listdir(self.path_inputs_downloads)}
+        path_x = {k: [glob.glob(os.path.join(path_down[k], x, "**.tsv"), recursive=True)[0] for x in v] for k,v in season.items()}#{x: glob.glob(os.path.join(x, '**.tsv'), recursive=True) for x in os.listdir(self.path_inputs_downloads)}
         
         
         
@@ -1256,11 +1256,14 @@ class AclimateDownloading():
         print("\n Iniciando Primera corrida de CPT")
 
         print(dir_names)
+        print(path_x)
         print(path_run)
         print(path_output_pred)
         time.sleep(10)
         for k in dir_names:
+            print(k)
             for j in  range(len(path_x[k])):
+                print("  entre aqui")
                 print(f">>> Processing: {os.path.basename( path_x[k][j])}")
                 self.run_cpt( path_x = path_x[k][j],
                         path_y = path_zone[k],
