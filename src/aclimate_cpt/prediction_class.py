@@ -1094,8 +1094,8 @@ class AclimateDownloading():
 
             merged_out_path = re.sub("[a-zA-Z]+.tsv", "merged.tsv", file_path_1 )
 
-            tmp_file = os.path.join(tempfile.gettempdir(), os.path.basename(tempfile.mktemp(suffix=".bat")))
-            
+            tmp_file =  re.sub("[a-zA-Z]+.tsv", "batch.bat", file_path_1 )
+
             # argumentos para el batch
             if platform.system() == "Windows":
                 cpt_batch = "CPT_batch.exe"
@@ -1132,6 +1132,7 @@ class AclimateDownloading():
                 elif platform.system() == "Linux":
                     os.system("chmod +x"+tmp_file)
                     os.system(tmp_file)
+                os.remove(tmp_file)
                 # Ejecución de CPT     
             
                 
@@ -1208,30 +1209,12 @@ class AclimateDownloading():
 
         print(" \n Archivos de entrada Descargados \n")
 
-
-
        # all_path_season_dir = {k: glob.glob(f"{v}\\**") for k,v in path_down.items()}
        # all_path_files = {k: [ glob.glob(f"{x}\\**.tsv")  for x in v] for k,v in all_path_season_dir.items()}
         
-        for k,v in path_down.items():
-            print(f"checkin for downloads path for {k} which is : {v}")
-            print(">>>iniciando prueba de glob para: \n")
-            print(v)
-            print(f"      glob 1 test: {glob.glob(os.path.join(v, '**'))}")
-            rel_pth  = f"{v}{os.sep}**"
-            print(rel_pth)
-            print(f"      glob 2 test: {glob.glob(rel_pth)}")
-
-
-
         all_path_season_dir = {k: glob.glob(os.path.join(v, '**')) for k, v in path_down.items()}
         all_path_files = {k: [glob.glob(os.path.join(x,'**.tsv')) for x in v] for k, v in all_path_season_dir.items()}
-        
-        for v in all_path_files.values():
-            for x in range(len(v)):
-                print(f"path is: {v[x]}")
-        
-
+    
         for k,v in predictors.items():
             for x in range(len(v)):
                 if v[x] > 1:
