@@ -1261,9 +1261,7 @@ class AclimateDownloading():
         print(path_output_pred)
         time.sleep(10)
         for k in dir_names:
-            print(k)
             for j in  range(len(path_x[k])):
-                print("  entre aqui")
                 print(f">>> Processing: {os.path.basename( path_x[k][j])}")
                 self.run_cpt( path_x = path_x[k][j],
                         path_y = path_zone[k],
@@ -1300,7 +1298,7 @@ class AclimateDownloading():
         best_decil_l = {k: [self.best_GI(glob.glob(os.path.join(v[j], "output", '**_GI.txt'))) for j in range(len(v))] for k, v in path_months_l.items()}
 
 
-        metricas_all = {k: [ self.metricas(root_path = best_decil_l[k][v],month = month_season[k][v],season_type = season[k][v],predictand = predictands[k][v], true_col_names = part_id[k], years_season = years[k][v])for v in range(len(best_decil_l[k]))] for k in dir_names}
+        metricas_all = {k: [ self.metricas(root_path = best_decil_l[k][v],month = month_season[k][v], true_col_names = part_id[k], years_season = years[k][v])for v in range(len(best_decil_l[k]))] for k in dir_names}
 
         metricas_final = []
         for k,v in metricas_all.items():
