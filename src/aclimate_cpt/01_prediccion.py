@@ -1095,8 +1095,8 @@ def cpt_merge_x_files(file_paths):
 
         merged_out_path = re.sub("[a-zA-Z]+.tsv", "merged.tsv", file_path_1 )
 
-        tmp_file = os.path.join(tempfile.gettempdir(), os.path.basename(tempfile.mktemp(suffix=".bat")))
-        
+        tmp_file = re.sub("[a-zA-Z]+.tsv", "batch.bat", file_path_1 )
+
         # argumentos para el batch
         if platform.system() == "Windows":
             cpt_batch = "CPT_batch.exe"
@@ -1133,6 +1133,7 @@ def cpt_merge_x_files(file_paths):
             elif platform.system() == "Linux":
                 os.system("chmod +x"+tmp_file)
                 os.system(tmp_file)
+            os.remove(tmp_file)
             # Ejecución de CPT     
         
             
