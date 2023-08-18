@@ -1213,7 +1213,7 @@ class AclimateDownloading():
        # all_path_season_dir = {k: glob.glob(f"{v}\\**") for k,v in path_down.items()}
        # all_path_files = {k: [ glob.glob(f"{x}\\**.tsv")  for x in v] for k,v in all_path_season_dir.items()}
         
-        all_path_season_dir = {k: glob.glob(os.path.join(v, '**')) for k, v in path_down.items()}
+        all_path_season_dir = {k: [os.path.join(path_down[k],x) for x in v] for k, v in season.items()}
         all_path_files = {k: [ glob.glob(os.path.join(x,'**.tsv'))  for x in v] for k,v in all_path_season_dir.items()}
 
         for k,v in all_path_files.items():
@@ -1223,10 +1223,10 @@ class AclimateDownloading():
                     print(f">{v[x]}")
                     self.cpt_merge_x_files(all_path_files[k][x])
 
-        #all_path_unzziped = {k: glob.glob(f"{v}\\**\\**.tsv") for k,v in path_down.items()}
-        all_path_unzziped = {k: glob.glob(os.path.join(v, '**', '**.tsv')) for k, v in path_down.items()}
+        
+        all_path_unzziped =  {k: [ glob.glob(os.path.join(x,'**.tsv'))[0]  for x in v] for k,v in all_path_season_dir.items()}#{k: glob.glob(os.path.join(v, '**', '**.tsv')) for k, v in path_down.items()}
 
-        tsm_o = {k: [self.read_Files(pth, skip = 0) for pth in v]   for k,v in all_path_unzziped.items()}
+        tsm_o = {k:  [self.read_Files(x, skip = 0) for x in v]   for k,v in all_path_unzziped.items()}
         #time_sel = {k: {nm: get_cpt_dates(df) for nm,df in v.items()} for k,v in tsm_o.items()}
 
         print("\n Archivos de entrada cargados")
@@ -1243,8 +1243,10 @@ class AclimateDownloading():
         p_data     = {k: v.shape[1]-2 for k,v in data_y.items() }  
 
         #path_x     = {x: glob.glob(f"{os.path.join(self.path_inputs_downloads,x)}\\**.tsv", recursive = True) for x in os.listdir(self.path_inputs_downloads)}   # lapply(list.files(dir_save,full.names = T),function(x)list.files(x,recursive = T,full.names = T))
-        path_x = {x: glob.glob(os.path.join(self.path_inputs_downloads, x, '**.tsv'), recursive=True) for x in os.listdir(self.path_inputs_downloads)}
-
+        path_x = {k: [glob.glob(os.path.join(path_down[k], x, "**.tsv"), recursive=True) for x in v] for k,v in season.items()}#{x: glob.glob(os.path.join(x, '**.tsv'), recursive=True) for x in os.listdir(self.path_inputs_downloads)}
+        
+        
+        
         #path_zone  = {dir_names[x]: glob.glob(f"{os.path.join(self.path_inputs_prediccion, 'run_CPT')}\\**\\y_**.txt", recursive = True)[x] for x in range(len(dir_names))} #list.files(paste0(main_dir,"run_CPT"),full.names = T) %>% paste0(.,"/y_",list.files(path_dpto),".txt")
         path_zone = {dir_names[x]: glob.glob(os.path.join(self.path_inputs_prediccion, 'run_CPT', '**', 'y_**.txt'), recursive=True)[x] for x in range(len(dir_names))}
 
