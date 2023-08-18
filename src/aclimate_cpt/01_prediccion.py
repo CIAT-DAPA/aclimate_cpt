@@ -1133,7 +1133,7 @@ def cpt_merge_x_files(file_paths):
             elif platform.system() == "Linux":
                 os.system("chmod +x"+tmp_file)
                 os.system(tmp_file)
-            os.remove(tmp_file)
+            
             # Ejecución de CPT     
         
             
@@ -1145,6 +1145,7 @@ def cpt_merge_x_files(file_paths):
                 #os.rename(tmp_file, merged_out_path)
                 os.remove(file_path_1)
                 os.remove(file_path_2)
+                os.remove(tmp_file)
                 status = "Success"
         except subprocess.CalledProcessError:
             status = "Failed: Error al ejecutar CPT_batch"
