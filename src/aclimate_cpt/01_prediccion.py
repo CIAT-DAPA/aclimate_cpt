@@ -1253,7 +1253,7 @@ print(fin-inicio)
 print(" \n Archivos de entrada Descargados \n")
 
 
-all_path_season_dir = {k: glob.glob(f"{v}\\**") for k,v in path_down.items()}
+all_path_season_dir = {k: [os.path.join(path_down[k],x) for x in v] for k, v in season.items()}
 all_path_files = {k: [ glob.glob(os.path.join(x,'**.tsv'))  for x in v] for k,v in all_path_season_dir.items()}
 
 for k,v in all_path_files.items():
@@ -1263,7 +1263,7 @@ for k,v in all_path_files.items():
             print(f">{v[x]}")
             cpt_merge_x_files(all_path_files[k][x])
 
-all_path_unzziped = {k: glob.glob(f"{v}\\**\\**.tsv") for k,v in path_down.items()}
+all_path_unzziped =  {k: [ glob.glob(os.path.join(x,'**.tsv'))[0]  for x in v] for k,v in all_path_season_dir.items()}
 tsm_o = {k: [read_Files(pth, skip = 0) for pth in v]   for k,v in all_path_unzziped.items()}
 #time_sel = {k: {nm: get_cpt_dates(df) for nm,df in v.items()} for k,v in tsm_o.items()}
 
@@ -1279,7 +1279,7 @@ confi_l    = {k: [v[x]["modes"] for x in range(len(v)) if len(v[x]["modes"]) != 
 transform  =  {k: [v[x]["transformation"][0]["gamma"] for x in range(len(v)) if len(v[x]["transformation"]) != 0] for k,v in init_params.items()}
 p_data     = {k: v.shape[1]-2 for k,v in data_y.items() }  
 
-path_x     = {x: glob.glob(f"{os.path.join(dir_save,x)}\\**\\**.tsv", recursive = True) for x in os.listdir(dir_save)}   # lapply(list.files(dir_save,full.names = T),function(x)list.files(x,recursive = T,full.names = T))
+path_x = {k: [glob.glob(os.path.join(path_down[k], x, "**.tsv"), recursive=True) for x in v] for k,v in season.items()}#{x: glob.glob(os.path.join(x, '**.tsv'), recursive=True) for x in os.listdir(self.path_inputs_downloads)}
 path_zone  = {dir_names[x]: glob.glob(f"{os.path.join(main_dir, 'run_CPT')}\\**\\y_**.txt", recursive = True)[x] for x in range(len(dir_names))} #list.files(paste0(main_dir,"run_CPT"),full.names = T) %>% paste0(.,"/y_",list.files(path_dpto),".txt")
 path_output_pred = {k: [ os.path.join(pth, "output","0_") for pth in v] for k,v in path_months_l.items()}
 path_run         = {k: [ os.path.join(pth, "run_0"+ext_exe) for pth in v] for k,v in path_months_l.items()}#lapply(path_months_l,function(x)paste0(x,"/output/0_"))
