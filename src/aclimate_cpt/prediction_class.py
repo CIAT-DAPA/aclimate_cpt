@@ -1253,7 +1253,10 @@ class AclimateDownloading():
 
         print("\n Iniciando Primera corrida de CPT")
 
-
+        print(dir_names)
+        print(path_run)
+        print(path_output_pred)
+        time.sleep(10)
         for k in dir_names:
             for j in  range(len(path_x[k])):
                 print(f">>> Processing: {os.path.basename( path_x[k][j])}")
