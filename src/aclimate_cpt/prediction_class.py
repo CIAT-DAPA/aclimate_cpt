@@ -1168,8 +1168,7 @@ class AclimateDownloading():
         month_season =  {k: [self.get_season_months(x["season"], month_abb = month_abb) for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
         predictands  =  {k: [x["predictand"] for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
         predictors  =  {k: [ len(np.unique(pd.DataFrame(x["areas"])["predictor"].to_numpy().tolist())) for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
-        print(predictors)
-        time.sleep(5)
+        
         #start_date = date.today()+ datetime.timedelta(days = 30)
         years = {k: self.get_season_years(season_type = value[0]["type"], month = self.month, year = self.year) for k,value in init_params.items()}
 
@@ -1215,14 +1214,13 @@ class AclimateDownloading():
        # all_path_files = {k: [ glob.glob(f"{x}\\**.tsv")  for x in v] for k,v in all_path_season_dir.items()}
         
         all_path_season_dir = {k: glob.glob(os.path.join(v, '**')) for k, v in path_down.items()}
-        all_path_files = {k: [glob.glob(os.path.join(x,'**.tsv')) for x in v] for k, v in all_path_season_dir.items()}
-    
-        for k,v in predictors.items():
+        all_path_files = {k: [ glob.glob(os.path.join(x,'**.tsv'))  for x in v] for k,v in all_path_season_dir.items()}
+
+        for k,v in all_path_files.items():
             for x in range(len(v)):
-                if v[x] > 1:
+                if len(v[x]) > 1:
                     print(k)
                     print(f">{v[x]}")
-                    print(f">>>{all_path_files[k][x]}")
                     self.cpt_merge_x_files(all_path_files[k][x])
 
         #all_path_unzziped = {k: glob.glob(f"{v}\\**\\**.tsv") for k,v in path_down.items()}
