@@ -1279,7 +1279,7 @@ confi_l    = {k: [v[x]["modes"] for x in range(len(v)) if len(v[x]["modes"]) != 
 transform  =  {k: [v[x]["transformation"][0]["gamma"] for x in range(len(v)) if len(v[x]["transformation"]) != 0] for k,v in init_params.items()}
 p_data     = {k: v.shape[1]-2 for k,v in data_y.items() }  
 
-path_x = {k: [glob.glob(os.path.join(path_down[k], x, "**.tsv"), recursive=True) for x in v] for k,v in season.items()}#{x: glob.glob(os.path.join(x, '**.tsv'), recursive=True) for x in os.listdir(self.path_inputs_downloads)}
+path_x = {k: [glob.glob(os.path.join(path_down[k], x, "**.tsv"), recursive=True)[0] for x in v] for k,v in season.items()}#{x: glob.glob(os.path.join(x, '**.tsv'), recursive=True) for x in os.listdir(self.path_inputs_downloads)}
 path_zone  = {dir_names[x]: glob.glob(f"{os.path.join(main_dir, 'run_CPT')}\\**\\y_**.txt", recursive = True)[x] for x in range(len(dir_names))} #list.files(paste0(main_dir,"run_CPT"),full.names = T) %>% paste0(.,"/y_",list.files(path_dpto),".txt")
 path_output_pred = {k: [ os.path.join(pth, "output","0_") for pth in v] for k,v in path_months_l.items()}
 path_run         = {k: [ os.path.join(pth, "run_0"+ext_exe) for pth in v] for k,v in path_months_l.items()}#lapply(path_months_l,function(x)paste0(x,"/output/0_"))
