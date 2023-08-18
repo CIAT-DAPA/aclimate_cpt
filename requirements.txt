@@ -16,3 +16,4 @@ sys==3.10.0
 date==3.0.0
 dask==2023.0.2
 xarray==0.20.2
+openpyxl==3.0.9
