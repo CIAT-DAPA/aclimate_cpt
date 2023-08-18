@@ -1170,14 +1170,14 @@ month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct
 #########################################################
 print(os.path.join("D:/", "andres"))
 #define some global variables (some paths should be already defined in runMain so may not be necesary here)
-root_dir = os.path.join("D:"+os.sep, "documents_andres", "pr_1", "Colombia","inputs")
+root_dir = os.path.join("D:"+os.sep, "documents_andres", "pr_r", "Colombia","inputs")
 main_dir  = os.path.join(root_dir, "prediccionClimatica")
 path_dpto = os.path.join(main_dir, 'estacionesMensuales')#dir_response
 dir_save  = os.path.join(main_dir, "descarga") #paste0(dirPrediccionInputs, "descarga", sep = "", collapse = NULL)
 os.makedirs(os.path.join(main_dir, "run_CPT"), exist_ok=True)
 os.makedirs(dir_save, exist_ok=True)
 ext_exe = ".bat"
-dirOutputs  = os.path.join("D:"+os.sep, "documents_andres", "pr_1", "Colombia", "outputs")
+dirOutputs  = os.path.join("D:"+os.sep, "documents_andres", "pr_R", "Colombia", "outputs")
 dirPrediccionOutputs  = os.path.join(dirOutputs, "prediccionClimatica")
 path_save = os.path.join(dirPrediccionOutputs, "probForecast")
 os.makedirs(path_save, exist_ok=True)
@@ -1254,14 +1254,13 @@ print(" \n Archivos de entrada Descargados \n")
 
 
 all_path_season_dir = {k: glob.glob(f"{v}\\**") for k,v in path_down.items()}
-all_path_files = {k: [ glob.glob(f"{x}\\**.tsv")  for x in v] for k,v in all_path_season_dir.items()}
+all_path_files = {k: [ glob.glob(os.path.join(x,'**.tsv'))  for x in v] for k,v in all_path_season_dir.items()}
 
-for k,v in predictors.items():
+for k,v in all_path_files.items():
     for x in range(len(v)):
-        if v[x] > 1:
+        if len(v[x]) > 1:
             print(k)
             print(f">{v[x]}")
-            print(f">>>{all_path_files[k][x]}")
             cpt_merge_x_files(all_path_files[k][x])
 
 all_path_unzziped = {k: glob.glob(f"{v}\\**\\**.tsv") for k,v in path_down.items()}

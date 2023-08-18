@@ -1214,16 +1214,13 @@ class AclimateDownloading():
        # all_path_files = {k: [ glob.glob(f"{x}\\**.tsv")  for x in v] for k,v in all_path_season_dir.items()}
         
         all_path_season_dir = {k: glob.glob(os.path.join(v, '**')) for k, v in path_down.items()}
-        all_path_files = {k: [glob.glob(os.path.join(x,'**.tsv')) for x in v] for k, v in all_path_season_dir.items()}
-        print(predictors)
-        print(all_path_season_dir)
-        time.sleep(10)
-        for k,v in predictors.items():
+        all_path_files = {k: [ glob.glob(os.path.join(x,'**.tsv'))  for x in v] for k,v in all_path_season_dir.items()}
+
+        for k,v in all_path_files.items():
             for x in range(len(v)):
-                if v[x] > 1:
+                if len(v[x]) > 1:
                     print(k)
                     print(f">{v[x]}")
-                    print(f">>>{all_path_files[k][x]}")
                     self.cpt_merge_x_files(all_path_files[k][x])
 
         #all_path_unzziped = {k: glob.glob(f"{v}\\**\\**.tsv") for k,v in path_down.items()}
