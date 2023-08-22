@@ -1321,7 +1321,9 @@ class AclimateDownloading():
                 prob_final.append(prob_all[k][j])
         prob_final = reduce(self.bind_rows, prob_final)
 
-        prob_final.to_csv(
+        prob_final_1 = prob_final[['year', 'month', 'id', 'below', 'normal', 'above', 'season', 'predictand']]
+
+        prob_final_1.to_csv(
             os.path.join(self.path_save, "probabilities.csv")
             ,float_format = float
             ,index = False
