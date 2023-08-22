@@ -801,6 +801,7 @@ class AclimateDownloading():
         df_final["month"] = month
         df_final["season"] = season_type
         df_final["predictand"] = predictand
+        df_final = df_final.iloc[:,[4,5,0,1,2,3,6,7]]
 
         return df_final
 
@@ -866,6 +867,7 @@ class AclimateDownloading():
         pearsonacfDf.rename(columns = {'Station':'id'}, inplace = True)
         #pearsonacfDf['seson'] =  season_type
         #pearsonacfDf['predictand'] = predictand
+        
 
         return pearsonacfDf
 
