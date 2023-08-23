@@ -801,9 +801,9 @@ class AclimateDownloading():
         df_final["month"] = month
         df_final["season"] = season_type
         df_final["predictand"] = predictand
-        df_raw['below'] = float(df_raw['below'])/100
-        df_raw['normal'] = float(df_raw['normal'])/100
-        df_raw['above'] = float(df_raw['above'])/100
+        df_raw['below'] = df_raw['below'].apply(float)/100
+        df_raw['normal'] = df_raw['normal'].apply(float)/100
+        df_raw['above'] = df_raw['above'].apply(float)/100
         df_final = df_final.iloc[:,[4,5,0,1,2,3,6,7]]
 
         return df_final
