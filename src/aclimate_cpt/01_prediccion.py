@@ -778,9 +778,9 @@ def proba(
     df_final["month"] = month
     df_final["season"] = season_type
     df_final["predictand"] = predictand
-    df_raw['below'] = df_raw['below'].apply(float)/100
-    df_raw['normal'] = df_raw['normal'].apply(float)/100
-    df_raw['above'] = df_raw['above'].apply(float)/100
+    df_final['below'] = df_final['below'].apply(float)/100
+    df_final['normal'] = df_final['normal'].apply(float)/100
+    df_final['above'] = df_final['above'].apply(float)/100
     df_final = df_final.iloc[:,[4,5,0,1,2,3,6,7]]
 
     return df_final
