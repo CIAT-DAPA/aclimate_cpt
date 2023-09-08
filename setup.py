@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="aclimate_cpt",
-    version='v0.0.30',
+    version='v0.0.31',
     author="stevensotelo",
     author_email="h.sotelo@cgiar.com",
     description="Prediction module",
