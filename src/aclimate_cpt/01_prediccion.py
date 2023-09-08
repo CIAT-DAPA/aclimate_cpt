@@ -889,7 +889,7 @@ def get_season_years(season_type, month, year):
     mnths = [month+x for x in [0,1,2,3,4,5]]
     years = [year if x <= 12 else year+1 for x in mnths]
     if season_type == 'tri':
-        to_ret =  [years[x] for x in [0,3]]
+        to_ret =  [years[x] for x in [1,4]]
     elif season_type == "bi":
         to_ret =  [years[x] for x in [0,2,4]]
     else:
@@ -1217,6 +1217,8 @@ predictors  =  {k: [ len(np.unique(pd.DataFrame(x["areas"])["predictor"].to_nump
 
 start_date = date.today()+ timedelta(days = 30)
 years = {k: get_season_years(season_type = value[0]["type"], month = month, year = year) for k,value in init_params.items()}
+{k: value[0]['type'] for k,value in init_params.items()}
+
 
 path_months_l = {x: os.path.join(main_dir, "run_CPT", x) for x in dir_names}
 for ky,pth in path_months_l.items():
@@ -1354,3 +1356,34 @@ prob_final.to_excel(
 #####################################
 ###### END #########################
 ###################################
+
+def get_season_years(season_type, month, year):
+    """Function to generate year season
+    Parameters:
+
+    season_type (str): text identifier for season, extracted from imput params json file
+    month (int): Month number of inital month
+    year (int): Year of system date
+
+    Returns:
+    list with season years
+    """
+    mnths = [month+x for x in [0,1,2,3,4,5]]
+    years = [year if x <= 12 else year+1 for x in mnths]
+    if season_type == 'tri':
+        to_ret =  [years[x] for x in [1,4]]
+    elif season_type == "bi":
+        to_ret =  [years[x] for x in [0,2,4]]
+    else:
+        raise ValueError("Invalid season type")
+        
+    return(to_ret)
+
+get_season_years(season_type = "tri", month = 9, year = 2023)
+
+
+
+
+
+
+
