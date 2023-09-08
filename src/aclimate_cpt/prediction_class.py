@@ -570,7 +570,8 @@ class AclimateDownloading():
                     path_pca_scores_x, path_pca_eigen_y, path_pca_load_y, path_pca_scores_y, path_cca_load_x, path_cca_cc,
                     path_cca_scores_x, path_cca_load_y, path_cca_scores_y, path_hit_s, path_hit_ss]
         
-        
+        os.environ["CPT_BIN_DIR"] = "/forecast/models/CPT/15.5.10/bin/"
+        print(os.getenv("CPT_BIN_DIR"))
         if platform.system() == "Windows":
             cpt_batch = "CPT_batch.exe"
         elif platform.system() == "Linux":
