@@ -1100,6 +1100,7 @@ class AclimateDownloading():
             merged_out_path = re.sub("[a-zA-Z]+.tsv", "merged.tsv", file_path_1 )
 
             tmp_file =  re.sub("[a-zA-Z]+.tsv", "batch.bat", file_path_1 )
+            os.environ["CPT_BIN_DIR"] = "/forecast/models/CPT/15.5.3/bin/"
 
             # argumentos para el batch
             if platform.system() == "Windows":
@@ -1149,7 +1150,7 @@ class AclimateDownloading():
                     #os.rename(tmp_file, merged_out_path)
                     os.remove(file_path_1)
                     os.remove(file_path_2)
-                    os.remove(tmp_file)
+                    #os.remove(tmp_file)
                     status = "Success"
             except subprocess.CalledProcessError:
                 status = "Failed: Error al ejecutar CPT_batch"
