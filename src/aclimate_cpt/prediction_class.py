@@ -911,7 +911,7 @@ class AclimateDownloading():
         mnths = [month+x for x in [0,1,2,3,4,5]]
         years = [year if x <= 12 else year+1 for x in mnths]
         if season_type == 'tri':
-            to_ret =  [years[x] for x in [0,3]]
+            to_ret =  [years[x] for x in [1,4]]
         elif season_type == "bi":
             to_ret =  [years[x] for x in [0,2,4]]
         else:
@@ -1319,6 +1319,7 @@ class AclimateDownloading():
 
 
         prob_all = {k: [ self.proba(root_path = best_decil_l[k][v],month = month_season[k][v],season_type = season[k][v],predictand = predictands[k][v], true_col_names = part_id[k], years_season = years[k][v])for v in range(len(best_decil_l[k]))] for k in dir_names}
+
 
         prob_final = []
         for k,v in prob_all.items():
