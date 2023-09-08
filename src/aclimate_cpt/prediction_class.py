@@ -1136,21 +1136,22 @@ class AclimateDownloading():
                     os.system(tmp_file)
         
                 elif platform.system() == "Linux":
-                    os.system("chmod +x"+tmp_file)
+                    os.system("chmod +x "+ tmp_file)
                     os.system(tmp_file)
                 
                 # Ejecución de CPT     
             
                 
                 # verificacion de que se creó el archivo tempora;l
-                if not os.path.exists(tmp_file):
-                    status = "Failed: Error en la creación del archivo temporal"
+                if not os.path.exists(merged_out_path):
+                    status = "Failed: Error en la creación del archivo merged"
                 else:
                     # copia del archivo a merged out path
                     #os.rename(tmp_file, merged_out_path)
                     os.remove(file_path_1)
                     os.remove(file_path_2)
-                    #os.remove(tmp_file)
+                    os.remove(tmp_file)
+                    os.environ["CPT_BIN_DIR"] = "/forecast/models/CPT/15.5.10/bin/"
                     status = "Success"
             except subprocess.CalledProcessError:
                 status = "Failed: Error al ejecutar CPT_batch"
