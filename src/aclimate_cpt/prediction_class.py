@@ -23,6 +23,7 @@ from datetime import date, datetime, timedelta
 import subprocess
 import tempfile
 import csv
+from requests.exceptions import RequestException, Timeout
 from dateutil.relativedelta import relativedelta
 from aclimate_cpt.tools_d_r import DownloadProgressBar,DirectoryManager
 
@@ -959,53 +960,62 @@ class AclimateDownloading():
         return best_gi[0]
 
 
-    def download_gz_predictor_file(self,url, path ,timeout=300):
-        # url = urls[0]
-        # path = all_path_down[0]
-        code = False
-        while code== False:
-            try:
-                response = requests.get(url, stream=True, timeout=timeout)
-                response.raise_for_status()  # Check for HTTP errors
-                
-                if(response.status_code != 200):
-                    raise Exception("Code status error")
-                
-                # Obtener el tamaño esperado del archivo del encabezado "Content-Length"
-                expected_size = int(response.headers.get('Content-Length', 0))
-
-                # Descargar el archivo y verificar el tamaño
-                downloaded_size = 0
-                
-                progress_bar = tqdm(total=expected_size, unit='B', unit_scale=True, desc=path.split('/')[-1], miniters=1)
-
-                with open(path, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        downloaded_size += len(chunk)
-                        f.write(chunk)
-                        progress_bar.update(len(chunk))
-                progress_bar.close()
-                
-                if downloaded_size == expected_size:
-                    print(".gz file downloaded successfully")
-
-                    # Descomprimir el archivo descargado
-                    with gzip.open(path, 'rb') as f_in:
-                        with open(path.replace('.gz',''), 'wb') as f_out:
-                            shutil.copyfileobj(f_in, f_out)
-                    os.remove(path)
-                    print(".gz file uncompressed successfully")
-                    code = True
-                    return print("Process done successfully")
+    def download_gz_predictor_file(self, url, path ,timeout=1000, force= False):
+    
+        if force or os.path.exists(path.replace('.gz','')) == False:
+            
+            if os.path.exists(path.replace('.gz','')):
+                os.remove(path.replace('.gz',''))
+        
+            code = False
+            while code== False:
+                try:
+                    response = requests.get(url, stream=True, timeout=timeout)
+                    response.raise_for_status()  # Check for HTTP errors
                     
-                else:
-                    print(f" Downloaded file size ({downloaded_size} bytes) doesn't match expected size ({expected_size} bytes).")
+                    if(response.status_code != 200):
+                        raise Exception("Code status error")
+                    
+                    # Obtener el tamaño esperado del archivo del encabezado "Content-Length"
+                    expected_size = int(response.headers.get('Content-Length', 0))
+        
+                    # Descargar el archivo y verificar el tamaño
+                    downloaded_size = 0
+                    
+                    progress_bar = tqdm(total=expected_size, unit='B', unit_scale=True, desc=path.split('/')[-1], miniters=1)
+        
+                    with open(path, 'wb') as f:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            downloaded_size += len(chunk)
+                            f.write(chunk)
+                            progress_bar.update(len(chunk))
+                    progress_bar.close()
+                    
+                    if downloaded_size == expected_size:
+                        print(".gz file downloaded successfully")
+        
+                        # Descomprimir el archivo descargado
+                        with gzip.open(path, 'rb') as f_in:
+                            with open(path.replace('.gz',''), 'wb') as f_out:
+                                shutil.copyfileobj(f_in, f_out)
+                        os.remove(path)
+                        print(".gz file uncompressed successfully")
+                        code = True
+                        return print("Process done successfully")
+                        
+                    else:
+                        print(f" Downloaded file size ({downloaded_size} bytes) doesn't match expected size ({expected_size} bytes).")
+                        os.remove(path)
+                except (RequestException, IOError, Timeout) as e:
+                    if isinstance(e, Timeout):
+                        print(f"Download timed out: {e}. Retrying...")
+                    else:
+                        print(f"Download failed: {e}")
                     os.remove(path)
-            except (requests.exceptions.RequestException, IOError) as e:
-                print(f"Download failed: {e}")
-                os.remove(path)
-                
-
+        else:
+            print("\tFile already downloaded!",path)
+            
+            
         return False
 
 
