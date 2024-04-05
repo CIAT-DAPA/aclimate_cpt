@@ -1099,7 +1099,7 @@ def cpt_merge_x_files(file_paths):
 
         merged_out_path = re.sub("[a-zA-Z]+.tsv", "merged.tsv", file_path_1 )
 
-        tmp_file = re.sub("[a-zA-Z]+.tsv", "batch.bat", file_path_1 )
+        tmp_file =  re.sub("[a-zA-Z]+.tsv", "batch.bat", file_path_1 )
 
         # argumentos para el batch
         if platform.system() == "Windows":
@@ -1142,7 +1142,7 @@ def cpt_merge_x_files(file_paths):
         
             
             # verificacion de que se creó el archivo tempora;l
-            if not os.path.exists(tmp_file):
+            if not os.path.exists(merged_out_path):
                 status = "Failed: Error en la creación del archivo temporal"
             else:
                 # copia del archivo a merged out path
@@ -1156,6 +1156,7 @@ def cpt_merge_x_files(file_paths):
     else:
         print(f"No wind file was found on file_path list ommiting merge files process. {file_paths}")
         status = "Failed: Error al ejecutar CPT_batch for merging"
+    
     
     
     return status
@@ -1174,7 +1175,7 @@ month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct
 #########################################################
 print(os.path.join("D:/", "andres"))
 #define some global variables (some paths should be already defined in runMain so may not be necesary here)
-root_dir = os.path.join("D:"+os.sep, "documents_andres", "pr_r", "Colombia","inputs")
+root_dir = os.path.join("D:"+os.sep, "documents_andres", "pr_descarga", "Colombia","inputs")
 main_dir  = os.path.join(root_dir, "prediccionClimatica")
 path_dpto = os.path.join(main_dir, 'estacionesMensuales')#dir_response
 dir_save  = os.path.join(main_dir, "descarga") #paste0(dirPrediccionInputs, "descarga", sep = "", collapse = NULL)
@@ -1203,8 +1204,25 @@ os.makedirs(path_save, exist_ok=True)
 
 
 dir_names = os.listdir(path_dpto)
+path_stations = glob.glob(f"{path_dpto}\\**\\stations.csv", recursive = True)
 path_json = glob.glob(f"{path_dpto}\\**\\cpt_areas.json", recursive = True)
 init_params = {k: load_json(pth) for k,pth in zip(dir_names, path_json)}
+
+#sacar del analisis departamentos donde el cpt_areas.json no tenga nada
+items_lgth = {k: sum([len(x["areas"]) for x in val])  for k,val in init_params.items()}
+empty_dpt = [k for k,v in items_lgth.items() if v == 0]
+lgth_list = [v for k,v in items_lgth.items()]
+if len(empty_dpt) >0:
+    for idx in range(len(items_lgth)):
+        if lgth_list[idx] == 0:
+            dir_names.pop(idx)
+            path_json.pop(idx)
+            path_stations.pop(idx)
+    for nm in empty_dpt:
+        init_params.pop(nm)
+        
+
+
 
 month        =  int(date.today().strftime("%m"))
 year         =  int(date.today().strftime("%Y"))
@@ -1213,12 +1231,11 @@ month_season =  {k: [get_season_months(x["season"], month_abb = month_abb) for x
 predictands  =  {k: [x["predictand"] for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
 predictors  =  {k: [ len(np.unique(pd.DataFrame(x["areas"])["predictor"].to_numpy().tolist())) for x in val if len(x['areas'] )!= 0]  for k,val in init_params.items()}
 
+#list_elements = [len(x) for x in predictands.values()]
 
 
 start_date = date.today()+ timedelta(days = 30)
 years = {k: get_season_years(season_type = value[0]["type"], month = month, year = year) for k,value in init_params.items()}
-{k: value[0]['type'] for k,value in init_params.items()}
-
 
 path_months_l = {x: os.path.join(main_dir, "run_CPT", x) for x in dir_names}
 for ky,pth in path_months_l.items():
@@ -1275,7 +1292,7 @@ tsm_o = {k: [read_Files(pth, skip = 0) for pth in v]   for k,v in all_path_unzzi
 
 print("\n Archivos de entrada cargados")
 
-path_stations = glob.glob(f"{path_dpto}\\**\\stations.csv", recursive = True)
+
 data_y = {k: pd.read_csv(fl) for k,fl in zip(dir_names, path_stations)}
 part_id = {k: files_y(df, k, main_dir = main_dir) for k,df in data_y.items()}
 
