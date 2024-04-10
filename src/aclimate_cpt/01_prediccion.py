@@ -1212,7 +1212,10 @@ init_params = {k: load_json(pth) for k,pth in zip(dir_names, path_json)}
 items_lgth = {k: sum([len(x["areas"]) for x in val])  for k,val in init_params.items()}
 empty_dpt = [k for k,v in items_lgth.items() if v == 0]
 lgth_list = [v for k,v in items_lgth.items()]
+bool_lgth = [x == 0 for x in lgth_list]
+
 if len(empty_dpt) >0:
+    Warning("Empty areas.json file found")
     for idx in range(len(items_lgth)):
         if lgth_list[idx] == 0:
             dir_names.pop(idx)
@@ -1220,9 +1223,9 @@ if len(empty_dpt) >0:
             path_stations.pop(idx)
     for nm in empty_dpt:
         init_params.pop(nm)
-        
 
-
+if all(bool_lgth):
+    raise ValueError("departments has ares.json file empty")     
 
 month        =  int(date.today().strftime("%m"))
 year         =  int(date.today().strftime("%Y"))
