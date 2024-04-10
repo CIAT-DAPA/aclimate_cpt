@@ -1178,7 +1178,31 @@ class AclimateDownloading():
         dir_names = os.listdir(self.path_inputs_monthly_stations)
         #path_json = glob.glob(f"{self.path_inputs_monthly_stations}\\**\\cpt_areas.json", recursive = True)
         path_json = glob.glob(os.path.join(self.path_inputs_monthly_stations, '**', 'cpt_areas.json'), recursive=True)
+        path_stations = glob.glob(os.path.join(self.path_inputs_monthly_stations, '**', 'stations.csv'), recursive=True)
         init_params = {k: self.load_json(pth) for k,pth in zip(dir_names, path_json)}
+        #sacar del analisis departamentos donde el cpt_areas.json no tenga nada
+        items_lgth = {k: sum([len(x["areas"]) for x in val])  for k,val in init_params.items()}
+        empty_dpt = [k for k,v in items_lgth.items() if v == 0]
+        lgth_list = [v for k,v in items_lgth.items()]
+        bool_lgth = [x == 0 for x in lgth_list]
+
+        if len(empty_dpt) >0:
+            Warning("Empty areas.json file found")
+            for idx in range(len(items_lgth)):
+                if lgth_list[idx] == 0:
+                    dir_names.pop(idx)
+                    path_json.pop(idx)
+                    path_stations.pop(idx)
+            for nm in empty_dpt:
+                init_params.pop(nm)
+
+        if all(bool_lgth):
+            raise ValueError("departments has ares.json file empty")   
+
+
+
+
+
         month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
         ext_exe = ".bat"
 
@@ -1250,7 +1274,7 @@ class AclimateDownloading():
         print("\n Archivos de entrada cargados")
        
         #path_stations = glob.glob(f"{self.path_inputs_monthly_stations}\\**\\stations.csv", recursive = True)
-        path_stations = glob.glob(os.path.join(self.path_inputs_monthly_stations, '**', 'stations.csv'), recursive=True)
+        
         data_y = {k: pd.read_csv(fl) for k,fl in zip(dir_names, path_stations)}
         part_id = {k: self.files_y(df, k, main_dir = self.path_inputs_prediccion) for k,df in data_y.items()}
 
