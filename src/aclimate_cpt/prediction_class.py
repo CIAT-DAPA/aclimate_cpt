@@ -1186,6 +1186,9 @@ class AclimateDownloading():
         lgth_list = [v for k,v in items_lgth.items()]
         bool_lgth = [x == 0 for x in lgth_list]
 
+        if all(bool_lgth):
+            raise ValueError("All states has areas.json file with empty parameters (dry season)") 
+
         if len(empty_dpt) >0:
             Warning("Empty areas.json file found (dry area), removing state")
             for idx in range(len(items_lgth)):
@@ -1196,12 +1199,7 @@ class AclimateDownloading():
             for nm in empty_dpt:
                 init_params.pop(nm)
 
-        if all(bool_lgth):
-            raise ValueError("All states has areas.json file with empty parameters (dry season)")   
-
-
-
-
+          
 
         month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
         ext_exe = ".bat"
