@@ -1263,7 +1263,19 @@ class AclimateDownloading():
                     print(f">{v[x]}")
                     self.cpt_merge_x_files(all_path_files[k][x])
 
-        
+        av_fls = {k: [ list(os.listdir(x)) for x in v] for k,v in all_path_season_dir.items()}
+        av_fls_lgth = list(chain(av_fls.values()))
+        av_fls_lgth = [[len(j) for j in x] for x in av_fls_lgth]
+        lgl = [ any([True if j ==0 else False for j in x]) for x in av_fls_lgth] 
+        dir_wrong = [list(chain(all_path_season_dir.keys()))[x] for x in range(len(lgl)) if lgl[x] ]
+
+        if any(lgl):
+            raise ValueError(f"Some file was not downloaded properly for the stationID {dir_wrong}")
+
+
+
+
+
         all_path_unzziped =  {k: [ glob.glob(os.path.join(x,'**.tsv'))[0]  for x in v] for k,v in all_path_season_dir.items()}#{k: glob.glob(os.path.join(v, '**', '**.tsv')) for k, v in path_down.items()}
 
         tsm_o = {k:  [self.read_Files(x, skip = 0) for x in v]   for k,v in all_path_unzziped.items()}
