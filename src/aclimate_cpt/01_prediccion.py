@@ -1170,12 +1170,13 @@ start_time = date.today()
 month_abb = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 #options(timeout=180)
 
+
 #########################################################
 ########## NOT RUN ######################################
 #########################################################
 print(os.path.join("D:/", "andres"))
 #define some global variables (some paths should be already defined in runMain so may not be necesary here)
-root_dir = os.path.join("D:"+os.sep, "documents_andres", "pr_descarga", "Colombia","inputs")
+root_dir = "D:/documents_andres/pr_1/colombia2/inputs" #os.path.join("D:"+os.sep, "documents_andres", "pr_descarga", "Colombia","inputs")
 main_dir  = os.path.join(root_dir, "prediccionClimatica")
 path_dpto = os.path.join(main_dir, 'estacionesMensuales')#dir_response
 dir_save  = os.path.join(main_dir, "descarga") #paste0(dirPrediccionInputs, "descarga", sep = "", collapse = NULL)
@@ -1288,6 +1289,17 @@ for k,v in all_path_files.items():
             print(k)
             print(f">{v[x]}")
             cpt_merge_x_files(all_path_files[k][x])
+
+
+#identificar si hay archivos que NO se descargaron
+av_fls = {k: [ list(os.listdir(x)) for x in v] for k,v in all_path_season_dir.items()}
+av_fls_lgth = list(chain(av_fls.values()))
+av_fls_lgth = [[len(j) for j in x] for x in av_fls_lgth]
+lgl = [ any([True if j ==0 else False for j in x]) for x in av_fls_lgth] 
+dir_wrong = [list(chain(all_path_season_dir.keys()))[x] for x in range(len(lgl)) if lgl[x] ]
+
+if any(lgl):
+    raise ValueError(f"Some file was not downloaded properly for the stationID {dir_wrong}")
 
 all_path_unzziped =  {k: [ glob.glob(os.path.join(x,'**.tsv'))[0]  for x in v] for k,v in all_path_season_dir.items()}
 tsm_o = {k: [read_Files(pth, skip = 0) for pth in v]   for k,v in all_path_unzziped.items()}
